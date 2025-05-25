@@ -279,21 +279,19 @@ if __name__ == "__main__":
     )
     
     # Process with API and get final translations
-    final_translations = process_with_api_direct_json(
-        intermediate_file,
-        args.api_key,
-        args,
-        batch_size=args.batch_size
-    )
+final_translations = process_with_api_direct_json(
+    intermediate_file,
+    args.api_key,
+    args,
+    batch_size=args.batch_size
+)
 
-    # Ensure output directory exists before saving
-   os.makedirs(args.output_dir, exist_ok=True)  # <-- NEW LINE
+# Ensure output directory exists before saving
+os.makedirs(args.output_dir, exist_ok=True)  # <-- Fixed indentation (4 spaces)
 
-   # Save final translations
-   output_path = os.path.join(args.output_dir, "openai_translations.json")
-   with open(output_path, "w", encoding="utf-8") as f:
-       json.dump(final_translations, f, indent=2, ensure_ascii=False)
+# Save final translations
+output_path = os.path.join(args.output_dir, "openai_translations.json")
+with open(output_path, "w", encoding="utf-8") as f:
+    json.dump(final_translations, f, indent=2, ensure_ascii=False)
 
-
-    
-    print(f"\n✅ Saved {len(final_translations)} translations to openai_translations.json")
+print(f"\n✅ Saved {len(final_translations)} translations to openai_translations.json")

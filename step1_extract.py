@@ -355,7 +355,7 @@ def extract_from_jsonld(obj, block_counter, nlp, structured_output, flattened_ou
     return block_counter
 
 
-def extract_translatable_html(input_path, lang_code, output_dir="."):
+def extract_translatable_html(input_path, lang_code, secondary_lang=None, output_dir="."):
     os.makedirs(output_dir, exist_ok=True)
     
     nlp = load_spacy_model(lang_code)

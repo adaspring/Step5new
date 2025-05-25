@@ -285,11 +285,15 @@ if __name__ == "__main__":
         args,
         batch_size=args.batch_size
     )
-    
-    # Save final translations
-    output_path = os.path.join(args.output_dir, "openai_translations.json")
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(final_translations, f, indent=2, ensure_ascii=False)
-    
+
+    # Ensure output directory exists before saving
+   os.makedirs(args.output_dir, exist_ok=True)  # <-- NEW LINE
+
+   # Save final translations
+   output_path = os.path.join(args.output_dir, "openai_translations.json")
+   with open(output_path, "w", encoding="utf-8") as f:
+       json.dump(final_translations, f, indent=2, ensure_ascii=False)
+
+
     
     print(f"\n✅ Saved {len(final_translations)} translations to openai_translations.json")

@@ -260,7 +260,8 @@ if __name__ == "__main__":
     parser.add_argument("--secondary-lang")
     parser.add_argument("--target-lang", required=True)
     parser.add_argument("--batch-size", type=int, default=10, help="Number of entries per batch")
-    
+    parser.add_argument("--output-dir", default=".", help="Output directory for results")
+
     args = parser.parse_args()
     
     # Validate input files first
@@ -285,7 +286,9 @@ if __name__ == "__main__":
     )
     
     # Save final translations
-    with open("openai_translations.json", "w", encoding="utf-8") as f:
+    output_path = os.path.join(args.output_dir, "openai_translations.json")
+    with open(output_path, "w", encoding="utf-8") as f:
         json.dump(final_translations, f, indent=2, ensure_ascii=False)
+    
     
     print(f"\n✅ Saved {len(final_translations)} translations to openai_translations.json")

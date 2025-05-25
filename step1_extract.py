@@ -355,7 +355,7 @@ def extract_from_jsonld(obj, block_counter, nlp, structured_output, flattened_ou
     return block_counter
 
 
-def extract_translatable_html(input_path, lang_code):
+def extract_translatable_html(input_path, lang_code, output_dir="."):
     nlp = load_spacy_model(lang_code)
 
     with open(input_path, "r", encoding="utf-8") as f:
@@ -561,20 +561,21 @@ def extract_translatable_html(input_path, lang_code):
                 categorized_sentences[category].append(entry)
     
     # Write the categorized sentences to file
-    with open("translatable_flat_sentences.json", "w", encoding="utf-8") as f:
+    
+    with open(os.path.join(output_dir, "translatable_flat_sentences.json"), "w", encoding="utf-8") as f:
         json.dump(categorized_sentences, f, indent=2, ensure_ascii=False)
-
     
-    with open("translatable_flat.json", "w", encoding="utf-8") as f:
-         json.dump(reformatted_flattened, f, indent=2, ensure_ascii=False)
+    with open(os.path.join(output_dir, "translatable_flat.json"), "w", encoding="utf-8") as f:
+        json.dump(reformatted_flattened, f, indent=2, ensure_ascii=False)
     
-    with open("translatable_structured.json", "w", encoding="utf-8") as f:
+    with open(os.path.join(output_dir, "translatable_structured.json"), "w", encoding="utf-8") as f:
         json.dump(structured_output, f, indent=2, ensure_ascii=False)
-
-    with open("non_translatable.html", "w", encoding="utf-8") as f:
+    
+    
+    with open(os.path.join(output_dir, "non_translatable.html"), "w", encoding="utf-8") as f:
         f.write(str(soup))
+
 print("✅ Step 1 complete: saved translatable_flat.json, translatable_structured.json, translatable_flat_sentences.json, and non_translatable.html.")
- 
 
 
 if __name__ == "__main__":
@@ -591,6 +592,13 @@ if __name__ == "__main__":
         "input_file",
         help="Path to the HTML file to process"
     )
+
+    parser.add_argument(
+           "--output-dir",
+    default=".",
+    help="Output directory for extracted files (default: current directory)"
+    )
+
     
     # Primary language (MANDATORY)
     parser.add_argument(
@@ -621,5 +629,11 @@ Examples: --secondary-lang fr (French), --secondary-lang es (Spanish)"""
     if args.secondary_lang and args.secondary_lang == args.lang:
         parser.error("Primary and secondary languages cannot be the same!")
 
-    # Run extraction
-    extract_translatable_html(args.input_file, args.lang)
+    
+    extract_translatable_html(
+        args.input_file, 
+        args.lang,
+        secondary_lang=args.secondary_lang,
+        output_dir=args.output_dir
+    )
+

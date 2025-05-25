@@ -111,13 +111,13 @@ def main():
     parser.add_argument("--openai", 
                        help="Path to openai_translations.json (OpenAI translations)")
     parser.add_argument("--output-deepl", default="final_deepl.html",
-                       help="Output file for DeepL version")
+                       help="Output filename for DeepL version")
     parser.add_argument("--output-openai", default="final_openai.html",
-                       help="Output file for OpenAI version")
+                       help="Output filename for OpenAI version")
     parser.add_argument("--both", action="store_true",
                        help="Process both translation sources")
     parser.add_argument("--output-dir", default="output",
-                       help="Directory for output files")
+                       help="Base directory for output files")
     
     args = parser.parse_args()
     
@@ -135,24 +135,28 @@ def main():
         print(f"Error: HTML file {args.html} does not exist")
         sys.exit(1)
     
-    # Create output directory
-    os.makedirs(args.output_dir, exist_ok=True)
+    # Create output structure
+    subdir = os.path.basename(os.path.dirname(args.html))  # e.g., "index"
+    final_output_dir = os.path.join(args.output_dir, subdir)
+    os.makedirs(final_output_dir, exist_ok=True)
+    
+    # Create output paths with proper structure
+    deepl_output = os.path.join(final_output_dir, os.path.basename(args.output_deepl))
+    openai_output = os.path.join(final_output_dir, os.path.basename(args.output_openai))
     
     print(f"\n{' Starting HTML Merge Process ':=^50}")
     print(f"Source HTML: {args.html}")
-    print(f"Output Directory: {args.output_dir}")
+    print(f"Output Directory: {final_output_dir}")
     
     # Process translations
     results = {}
     if args.deepl or args.both:
-        deepl_output = os.path.join(args.output_dir, args.output_deepl)
         success = process_translation_set(
             args.html, args.deepl, deepl_output, "DeepL"
         )
         results["deepl"] = (deepl_output, success)
     
     if args.openai or args.both:
-        openai_output = os.path.join(args.output_dir, args.output_openai)
         success = process_translation_set(
             args.html, args.openai, openai_output, "OpenAI"
         )
@@ -166,6 +170,3 @@ def main():
         print(f"{label.upper():<8} {status:<8} {path} ({size:,} bytes)")
     
     print("\nProcess completed!")
-
-if __name__ == "__main__":
-    main()

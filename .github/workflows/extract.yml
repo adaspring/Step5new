@@ -52,7 +52,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install beautifulsoup4 spacy html5lib regex pypinyin langdetect deepl openai
+          pip install beautifulsoup4 spacy html5lib regex pypinyin langdetect deepl openai jq
           python -m spacy download en_core_web_sm
           python -m spacy download zh_core_web_sm
           python -m spacy download fr_core_news_sm
@@ -63,11 +63,6 @@ jobs:
           python -m spacy download ru_core_news_sm
           python -m spacy download el_core_news_sm
           python -m spacy download xx_ent_wiki_sm
-
-      - name: Initialize memory file if enabled
-        if: ${{ github.event.inputs.use_memory == 'true' }}
-        run: |
-          echo "{}" > memory.json
 
       - name: Process all HTML files
         run: |
@@ -91,7 +86,14 @@ jobs:
                 --output-dir "outputs/$filename"
             fi
 
-            # Step 2: Translate with memory if enabled
+            # Step 2: Translate with memory validation
+            if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then
+              if [ -f "memory.json" ] && ! jq empty memory.json 2>/dev/null; then
+                echo "ℹ️ Resetting corrupted memory.json"
+                echo "{}" > memory.json
+              fi
+            fi
+
             if [ -z "${{ github.event.inputs.secondary_lang }}" ]; then
               python step2_translate.py \
                 --input "outputs/$filename/translatable_flat.json" \
@@ -135,7 +137,8 @@ jobs:
                 --openai "outputs/$filename/openai_translations.json" \
                 --output-deepl "outputs/$filename/final_deepl_${{ github.event.inputs.target_lang }}.html" \
                 --output-openai "outputs/$filename/final_openai_${{ github.event.inputs.target_lang }}.html" \
-                --both
+                --both \
+                --output-dir "outputs/$filename"
             fi
           done
 

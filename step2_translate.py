@@ -12,7 +12,8 @@ def create_efficient_translatable_map(
     target_lang="FR", 
     primary_lang=None, 
     secondary_lang=None, 
-    memory_file=None
+    memory_file=None,
+    update_memory=False
 ):
     """
     Creates a translation map with language validation.
@@ -20,11 +21,14 @@ def create_efficient_translatable_map(
     """
     # Load translation memory
     translation_memory = {}
-    if memory_file and os.path.exists(memory_file):
+    if memory_file:
         try:
-            with open(memory_file, "r", encoding="utf-8") as f:
-                translation_memory = json.load(f)
-            print(f"Loaded {len(translation_memory)} cached translations")
+            if os.path.exists(memory_file):
+                with open(memory_file, "r", encoding="utf-8") as f:
+                    translation_memory = json.load(f)
+                print(f"Loaded {len(translation_memory)} cached translations")
+            else:
+                print(f"Creating new translation memory at {memory_file}")
         except json.JSONDecodeError:
             print(f"Warning: Corrupted translation memory file {memory_file}")
 
@@ -39,24 +43,27 @@ def create_efficient_translatable_map(
         if "text" in block_data:
             text = block_data["text"]
             token = block_id
-            if text in translation_memory:
-                translatable_map[token] = translation_memory[text]
+            # Create language-aware memory key
+            memory_key = f"{primary_lang or 'any'}-{target_lang}:{text}"
+            if memory_key in translation_memory:
+                translatable_map[token] = translation_memory[memory_key]
                 print(f"Using cached: {token}")
             else:
                 texts_to_translate.append(text)
                 token_indices.append(token)
-                original_texts[token] = text
+                original_texts[token] = (text, memory_key)
 
         if "segments" in block_data:
             for segment_id, segment_text in block_data["segments"].items():
                 token = f"{block_id}_{segment_id}"
-                if segment_text in translation_memory:
-                    translatable_map[token] = translation_memory[segment_text]
+                memory_key = f"{primary_lang or 'any'}-{target_lang}:{segment_text}"
+                if memory_key in translation_memory:
+                    translatable_map[token] = translation_memory[memory_key]
                     print(f"Using cached segment: {token}")
                 else:
                     texts_to_translate.append(segment_text)
                     token_indices.append(token)
-                    original_texts[token] = segment_text
+                    original_texts[token] = (segment_text, memory_key)
 
     
     def clean_text(text):
@@ -105,16 +112,17 @@ def create_efficient_translatable_map(
             for j in range(len(batch)):
                 global_index = batch_idx + j
                 token = token_indices[global_index]
-                original_text = original_texts[token]
+                original_text, memory_key = original_texts[token]
                 final_text = translated_batch[j]
                 
                 translatable_map[token] = final_text
-                translation_memory[original_text] = final_text
+                if update_memory:
+                    translation_memory[memory_key] = final_text
             
             print(f"Completed batch {batch_idx//batch_size + 1}/{(len(texts_to_translate) + batch_size - 1)//batch_size}")
 
-    # Update translation memory
-    if memory_file and translation_memory:
+    # Update translation memory if enabled
+    if memory_file and update_memory and translation_memory:
         os.makedirs(os.path.dirname(memory_file), exist_ok=True)
         with open(memory_file, "w", encoding="utf-8") as f:
             json.dump(translation_memory, f, ensure_ascii=False, indent=2)
@@ -122,16 +130,14 @@ def create_efficient_translatable_map(
 
     return translatable_map
 
-
-
-
 def translate_json_file(
     input_file, 
     output_file, 
     target_lang="FR", 
     primary_lang=None, 
     secondary_lang=None, 
-    memory_dir="translation_memory",
+    memory_file=None,
+    update_memory=False,
     segment_file=None
 ):
     """Main translation function with language validation"""
@@ -143,10 +149,6 @@ def translate_json_file(
     # Initialize translator
     translator = deepl.Translator(auth_key)
     
-    # Create memory directory
-    os.makedirs(memory_dir, exist_ok=True)
-    memory_file = os.path.join(memory_dir, f"translation_memory_{target_lang.lower()}.json")
-
     # Load input data
     try:
         with open(input_file, "r", encoding="utf-8") as f:
@@ -161,7 +163,8 @@ def translate_json_file(
         target_lang=target_lang,
         primary_lang=primary_lang,
         secondary_lang=secondary_lang,
-        memory_file=memory_file
+        memory_file=memory_file,
+        update_memory=update_memory
     )
 
     # Rebuild structure with translations
@@ -205,75 +208,40 @@ def translate_json_file(
 
     return translated_data
 
-def apply_translations(original_file, translations_file, output_file):
-    """Applies translations to original JSON structure"""
-    with open(original_file, "r", encoding="utf-8") as f:
-        original_data = json.load(f)
-    
-    with open(translations_file, "r", encoding="utf-8") as f:
-        translations = json.load(f)
-    
-    translated_data = {}
-    for block_id, block_data in original_data.items():
-        translated_block = block_data.copy()
-        
-        if "text" in block_data:
-            translated_block["text"] = translations.get(block_id, block_data["text"])
-        
-        if "segments" in block_data:
-            translated_block["segments"] = {
-                seg_id: translations.get(f"{block_id}_{seg_id}", seg_text)
-                for seg_id, seg_text in block_data["segments"].items()
-            }
-        
-        translated_data[block_id] = translated_block
-    
-    with open(output_file, "w", encoding="utf-8") as f:
-        json.dump(translated_data, f, indent=2, ensure_ascii=False)
-    
-    print(f"✅ Applied translations to {output_file}")
-
 def main():
     parser = argparse.ArgumentParser(
-        description="Translate JSON content with language validation"
+        description="Translate JSON content with enhanced memory support"
     )
-    parser.add_argument("--input", "-i", default="translatable_flat.json", 
+    parser.add_argument("--input", "-i", required=True, 
                        help="Input JSON file")
-    parser.add_argument("--output", "-o", default="translations.json",
+    parser.add_argument("--output", "-o", required=True,
                        help="Output JSON file")
     parser.add_argument("--lang", "-l", required=True,
                        help="Target language code (e.g., FR, ES)")
     parser.add_argument("--primary-lang", 
-                       help="Primary source language code (from step1)")
+                       help="Primary source language code")
     parser.add_argument("--secondary-lang",
-                       help="Secondary source language code (from step1)")
-    parser.add_argument("--memory", "-m", default="translation_memory",
-                       help="Translation memory directory")
-    parser.add_argument("--apply", "-a", action="store_true",
-                       help="Apply translations to original structure")
+                       help="Secondary source language code")
+    parser.add_argument("--memory", "-m", 
+                       help="Path to translation memory file")
+    parser.add_argument("--update-memory", action="store_true",
+                       help="Update translation memory with new translations")
     parser.add_argument("--segments", "-s", 
                        help="Output file for segment-only translations")
 
     args = parser.parse_args()
 
     try:
-        translations = translate_json_file(
+        translate_json_file(
             input_file=args.input,
             output_file=args.output,
             target_lang=args.lang,
             primary_lang=args.primary_lang,
             secondary_lang=args.secondary_lang,
-            memory_dir=args.memory,
+            memory_file=args.memory,
+            update_memory=args.update_memory,
             segment_file=args.segments
         )
-
-        if args.apply:
-            apply_translations(
-                args.input,
-                args.output,
-                f"translated_{args.input}"
-            )
-
     except Exception as e:
         print(f"❌ Error: {e}")
         return 1

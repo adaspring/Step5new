@@ -183,6 +183,25 @@ def translate_json_file(
     """Main translation function with enhanced memory support"""
     print(f"🚀 Starting translation: {input_file} -> {target_lang}")
     
+    # --- Consolidated directory creation (NEW) ---
+    # Output directory (for --output)
+    output_dir = os.path.dirname(output_file)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+    
+    # Segment directory (for --segments)
+    if segment_file:
+        segment_dir = os.path.dirname(segment_file)
+        if segment_dir:
+            os.makedirs(segment_dir, exist_ok=True)
+    
+    # Memory directory (for --memory)
+    if memory_file:
+        memory_dir = os.path.dirname(memory_file)
+        if memory_dir:
+            os.makedirs(memory_dir, exist_ok=True)
+    # --- END directory creation ---
+
     # Auth check
     auth_key = os.getenv("DEEPL_AUTH_KEY")
     if not auth_key:
@@ -227,17 +246,12 @@ def translate_json_file(
         
         translated_data[block_id] = translated_block
 
-    # Save output
-    output_dir = os.path.dirname(output_file)
-    if output_dir:
-        os.makedirs(output_dir, exist_ok=True)
-    
+    # Save output (now safe since directory exists)
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(translated_data, f, indent=2, ensure_ascii=False)
-    
     print(f"✅ Translation completed: {output_file}")
     
-    # Export segments if requested
+    # Export segments if requested (now safe since directory exists)
     if segment_file:
         segment_translations = {}
         for block_id, block_data in translated_data.items():

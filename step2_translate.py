@@ -19,19 +19,20 @@ def create_efficient_translatable_map(
     Creates a translation map with language validation.
     Only translates text detected as primary_lang or secondary_lang.
     """
-    # Load translation memory
+    # Load existing memory (unchanged)
     translation_memory = {}
-    if memory_file:
+    if memory_file and os.path.exists(memory_file):
         try:
-            if os.path.exists(memory_file):
-                with open(memory_file, "r", encoding="utf-8") as f:
-                    translation_memory = json.load(f)
-                print(f"Loaded {len(translation_memory)} cached translations")
-            else:
-                print(f"Creating new translation memory at {memory_file}")
+            with open(memory_file, 'r', encoding='utf-8') as f:
+                translation_memory = json.load(f)
+            print(f"Loaded {len(translation_memory)} cached translations")
         except json.JSONDecodeError:
-            print(f"Warning: Corrupted translation memory file {memory_file}")
+            print(f"⚠️ Corrupted memory - resetting {memory_file}")
+            # Auto-recover by recreating
+            with open(memory_file, 'w', encoding='utf-8') as f:
+                json.dump({}, f)   
 
+    
     # Prepare translation data structures
     translatable_map = {}
     texts_to_translate = []

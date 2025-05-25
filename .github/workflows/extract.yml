@@ -272,6 +272,7 @@ jobs:
         with:
           name: localization-results-${{ github.event.inputs.target_lang }}
           path: |
+            outputs/**/final_*.html
             outputs/
             global_memory.json
             memory_report.txt

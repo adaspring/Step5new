@@ -1,4 +1,5 @@
 # batch.py - Enhanced Version with Complete Block Coverage
+import os
 import json
 import openai
 import time

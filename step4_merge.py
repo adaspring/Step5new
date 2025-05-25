@@ -110,13 +110,13 @@ def main():
                        help="Path to segments_only.json (DeepL translations)")
     parser.add_argument("--openai", 
                        help="Path to openai_translations.json (OpenAI translations)")
-    parser.add_argument("--output-deepl", default="final_deepl.html",
-                       help="Output filename for DeepL version")
-    parser.add_argument("--output-openai", default="final_openai.html",
-                       help="Output filename for OpenAI version")
+    parser.add_argument("--output-deepl", default="final_deepl_{lang}.html",
+                       help="Output filename pattern for DeepL version (use {lang} placeholder)")
+    parser.add_argument("--output-openai", default="final_openai_{lang}.html",
+                       help="Output filename pattern for OpenAI version (use {lang} placeholder)")
     parser.add_argument("--both", action="store_true",
                        help="Process both translation sources")
-    parser.add_argument("--output-dir", default="output",
+    parser.add_argument("--output-dir", default="outputs",
                        help="Base directory for output files")
     
     args = parser.parse_args()
@@ -134,19 +134,37 @@ def main():
     if not Path(args.html).exists():
         print(f"Error: HTML file {args.html} does not exist")
         sys.exit(1)
+
+    # Extract target language from HTML filename (e.g., "FR" from "file_FR.html")
+    try:
+        lang = Path(args.html).stem.split('_')[-1]  # Gets last underscore segment
+        if not lang.isalpha() or len(lang) != 2:  # Basic language code validation
+            raise ValueError
+    except (IndexError, ValueError):
+        lang = "XX"
+        print("Warning: Could not detect language from filename, using 'XX' as fallback")
     
     # Create output structure
     subdir = os.path.basename(os.path.dirname(args.html))  # e.g., "index"
     final_output_dir = os.path.join(args.output_dir, subdir)
     os.makedirs(final_output_dir, exist_ok=True)
     
-    # Create output paths with proper structure
-    deepl_output = os.path.join(final_output_dir, os.path.basename(args.output_deepl))
-    openai_output = os.path.join(final_output_dir, os.path.basename(args.output_openai))
+    # Format output filenames with language code
+    deepl_output = os.path.join(
+        final_output_dir,
+        args.output_deepl.format(lang=lang)
+    )
+    openai_output = os.path.join(
+        final_output_dir,
+        args.output_openai.format(lang=lang)
+    )
     
     print(f"\n{' Starting HTML Merge Process ':=^50}")
     print(f"Source HTML: {args.html}")
+    print(f"Target Language: {lang}")
     print(f"Output Directory: {final_output_dir}")
+    print(f"DeepL Output: {os.path.basename(deepl_output)}")
+    print(f"OpenAI Output: {os.path.basename(openai_output)}")
     
     # Process translations
     results = {}

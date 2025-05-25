@@ -1,0 +1,148 @@
+name: Batch Extract, Translate and Refine Content
+
+on:
+  workflow_dispatch:
+    inputs:
+      lang:
+        description: "Primary language"
+        required: true
+        default: "en"
+        type: choice
+        options: [en, fr, es, zh, de, pt, it]
+      secondary_lang:
+        description: "Secondary language"
+        required: false
+        default: ""
+        type: choice
+        options: ["", en, fr, es, zh, de, pt, it]
+      target_lang:
+        description: "Target language"
+        required: true
+        default: "FR"
+        type: choice
+        options: [FR, EN, ES, DE, IT, PT, ZH]
+      merge_translations:
+        description: "Create final HTML files"
+        required: false
+        default: true
+        type: boolean
+      use_memory:
+        description: "Use translation memory"
+        required: false
+        default: true
+        type: boolean
+
+env:
+  DEEPL_AUTH_KEY: ${{ secrets.DEEPL_AUTH_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+jobs:
+  localization_pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install beautifulsoup4 spacy html5lib regex pypinyin langdetect deepl openai
+          python -m spacy download en_core_web_sm
+          python -m spacy download zh_core_web_sm
+          python -m spacy download fr_core_news_sm
+          python -m spacy download es_core_news_sm
+          python -m spacy download de_core_news_sm
+          python -m spacy download it_core_news_sm
+          python -m spacy download pt_core_news_sm
+          python -m spacy download ru_core_news_sm
+          python -m spacy download el_core_news_sm
+          python -m spacy download xx_ent_wiki_sm
+
+      - name: Initialize memory file if enabled
+        if: ${{ github.event.inputs.use_memory == 'true' }}
+        run: |
+          echo "{}" > memory.json
+
+      - name: Process all HTML files
+        run: |
+          mkdir -p outputs
+          for html_file in upload/*.html; do
+            # Get base filename without extension
+            filename=$(basename "$html_file" .html)
+            
+            # Create output directory
+            mkdir -p "outputs/$filename"
+            
+            # Step 1: Extract
+            if [ -z "${{ github.event.inputs.secondary_lang }}" ]; then
+              python step1_extract.py "$html_file" \
+                --lang "${{ github.event.inputs.lang }}" \
+                --output-dir "outputs/$filename"
+            else
+              python step1_extract.py "$html_file" \
+                --lang "${{ github.event.inputs.lang }}" \
+                --secondary-lang "${{ github.event.inputs.secondary_lang }}" \
+                --output-dir "outputs/$filename"
+            fi
+
+            # Step 2: Translate with memory if enabled
+            if [ -z "${{ github.event.inputs.secondary_lang }}" ]; then
+              python step2_translate.py \
+                --input "outputs/$filename/translatable_flat.json" \
+                --output "outputs/$filename/translations.json" \
+                --segments "outputs/$filename/segments_only.json" \
+                --lang "${{ github.event.inputs.target_lang }}" \
+                --primary-lang "${{ github.event.inputs.lang }}" \
+                $(if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then \
+                  echo "--memory memory.json --update-memory"; \
+                fi)
+            else
+              python step2_translate.py \
+                --input "outputs/$filename/translatable_flat.json" \
+                --output "outputs/$filename/translations.json" \
+                --segments "outputs/$filename/segments_only.json" \
+                --lang "${{ github.event.inputs.target_lang }}" \
+                --primary-lang "${{ github.event.inputs.lang }}" \
+                --secondary-lang "${{ github.event.inputs.secondary_lang }}" \
+                $(if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then \
+                  echo "--memory memory.json --update-memory"; \
+                fi)
+            fi
+
+            # Step 3: GPT refinement
+            python step3_gpt_process.py \
+              --context "outputs/$filename/translatable_flat_sentences.json" \
+              --translated "outputs/$filename/segments_only.json" \
+              --api-key "${{ env.OPENAI_API_KEY }}" \
+              --primary-lang "${{ github.event.inputs.lang }}" \
+              --target-lang "${{ github.event.inputs.target_lang }}" \
+              $(if [ -n "${{ github.event.inputs.secondary_lang }}" ]; then \
+                echo "--secondary-lang ${{ github.event.inputs.secondary_lang }}"; \
+              fi) \
+              --output "outputs/$filename/openai_translations.json"
+
+            # Step 4: Merge if enabled
+            if [ "${{ github.event.inputs.merge_translations }}" == "true" ]; then
+              python step4_merge.py \
+                --html "outputs/$filename/non_translatable.html" \
+                --deepl "outputs/$filename/segments_only.json" \
+                --openai "outputs/$filename/openai_translations.json" \
+                --output-deepl "outputs/$filename/final_deepl_${{ github.event.inputs.target_lang }}.html" \
+                --output-openai "outputs/$filename/final_openai_${{ github.event.inputs.target_lang }}.html" \
+                --both
+            fi
+          done
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: localization-results
+          path: |
+            outputs/
+            memory.json

@@ -221,6 +221,7 @@ jobs:
                 --openai "outputs/$filename/openai_translations.json" \
                 --output-deepl "outputs/$filename/final_deepl_${{ github.event.inputs.target_lang }}.html" \
                 --output-openai "outputs/$filename/final_openai_${{ github.event.inputs.target_lang }}.html" \
+                --target-lang "${{ github.event.inputs.target_lang }}" \
                 --both || {
                 echo "❌ Step 4 failed for $filename"
                 continue
@@ -267,12 +268,18 @@ jobs:
           
           cat memory_report.txt
 
+     
+      - name: List files to be uploaded
+        run: |
+          echo "Files to be uploaded:"
+          find outputs -type f
+          ls -la global_memory.json memory_report.txt
+      
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: localization-results-${{ github.event.inputs.target_lang }}
           path: |
-            outputs/**/final_*.html
-            outputs/
+            outputs/**/*
             global_memory.json
             memory_report.txt

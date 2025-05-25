@@ -1,4 +1,4 @@
-name: Extract, Translate and Refine Content
+name: tract, Translate and Refine Content
 
 on:
   workflow_dispatch:

@@ -3,7 +3,15 @@ import json
 import deepl
 import argparse
 import regex as re 
+import hashlib
 from pathlib import Path
+
+
+def create_content_hash(text):
+    """Create a consistent hash for content-based memory keys"""
+    # Normalize text for consistent hashing
+    normalized = re.sub(r'\s+', ' ', text.strip().lower())
+    return hashlib.md5(normalized.encode('utf-8')).hexdigest()[:12]
 
 
 def create_efficient_translatable_map(
@@ -16,18 +24,19 @@ def create_efficient_translatable_map(
     update_memory=False
 ):
     """
-    Creates a translation map with language validation.
-    Only translates text detected as primary_lang or secondary_lang.
+    Creates a translation map with language validation and improved memory.
+    Memory keys are now content-based hashes to identify identical blocks across files.
     """
-    # Load existing memory (unchanged)
+    # Load existing memory
     translation_memory = {}
     if memory_file and os.path.exists(memory_file):
         try:
             with open(memory_file, 'r', encoding='utf-8') as f:
                 translation_memory = json.load(f)
-            print(f"Loaded {len(translation_memory)} cached translations")
+            print(f"🧠 Loaded {len(translation_memory)} cached translations from memory")
         except json.JSONDecodeError:
-            print(f"⚠️ Corrupted memory - resetting {memory_file}")
+            print(f"⚠️  Corrupted memory file - resetting {memory_file}")
+            translation_memory = {}
             # Auto-recover by recreating
             with open(memory_file, 'w', encoding='utf-8') as f:
                 json.dump({}, f)   
@@ -38,36 +47,54 @@ def create_efficient_translatable_map(
     texts_to_translate = []
     token_indices = []
     original_texts = {}
+    cache_hits = 0
+    cache_misses = 0
 
     # Process all blocks and segments
     for block_id, block_data in json_data.items():
         if "text" in block_data:
             text = block_data["text"]
             token = block_id
-            # Create language-aware memory key
-            memory_key = f"{primary_lang or 'any'}-{target_lang}:{text}"
+            
+            # Create content-based memory key (improved for block deduplication)
+            content_hash = create_content_hash(text)
+            memory_key = f"{primary_lang or 'any'}-{target_lang}:hash:{content_hash}"
+            
             if memory_key in translation_memory:
                 translatable_map[token] = translation_memory[memory_key]
-                print(f"Using cached: {token}")
+                cache_hits += 1
+                print(f"💾 Cache hit for block: {token}")
             else:
                 texts_to_translate.append(text)
                 token_indices.append(token)
                 original_texts[token] = (text, memory_key)
+                cache_misses += 1
 
         if "segments" in block_data:
             for segment_id, segment_text in block_data["segments"].items():
                 token = f"{block_id}_{segment_id}"
-                memory_key = f"{primary_lang or 'any'}-{target_lang}:{segment_text}"
+                
+                # Create content-based memory key for segments
+                content_hash = create_content_hash(segment_text)
+                memory_key = f"{primary_lang or 'any'}-{target_lang}:hash:{content_hash}"
+                
                 if memory_key in translation_memory:
                     translatable_map[token] = translation_memory[memory_key]
-                    print(f"Using cached segment: {token}")
+                    cache_hits += 1
+                    print(f"💾 Cache hit for segment: {token}")
                 else:
                     texts_to_translate.append(segment_text)
                     token_indices.append(token)
                     original_texts[token] = (segment_text, memory_key)
+                    cache_misses += 1
 
+    print(f"📊 Memory statistics: {cache_hits} hits, {cache_misses} misses")
+    if cache_hits + cache_misses > 0:
+        hit_rate = (cache_hits / (cache_hits + cache_misses)) * 100
+        print(f"📊 Cache hit rate: {hit_rate:.1f}%")
     
     def clean_text(text):
+        """Clean text for language detection"""
         text = re.sub(r'^(.*?):\s*', '', text)
         text = re.sub(r'[^\p{L}\p{N}\s=+-]', ' ', text, flags=re.UNICODE)
         text = re.sub(r'\s+', ' ', text).strip()
@@ -75,9 +102,11 @@ def create_efficient_translatable_map(
         
     # Language-aware batch translation
     if texts_to_translate:
-        print(f"Processing {len(texts_to_translate)} segments with language validation...")
+        print(f"🌐 Processing {len(texts_to_translate)} new segments with language validation...")
         
         batch_size = 330
+        translations_added = 0
+        
         for batch_idx in range(0, len(texts_to_translate), batch_size):
             batch = texts_to_translate[batch_idx:batch_idx+batch_size]
             translated_batch = []
@@ -102,14 +131,16 @@ def create_efficient_translatable_map(
                     if allowed_langs and detected_lang in allowed_langs:
                         result = translator.translate_text(original_text, target_lang=target_lang)
                         translated_batch.append(result.text)
+                        translations_added += 1
                     else:
+                        # Keep original text if language not in allowed list
                         translated_batch.append(original_text)
 
             except Exception as e:
-                print(f"Translation skipped for batch (error: {str(e)[:50]}...)")
+                print(f"⚠️  Translation skipped for batch (error: {str(e)[:50]}...)")
                 translated_batch.extend(batch)
             
-            # Store results
+            # Store results in both translatable_map and memory
             for j in range(len(batch)):
                 global_index = batch_idx + j
                 token = token_indices[global_index]
@@ -120,14 +151,22 @@ def create_efficient_translatable_map(
                 if update_memory:
                     translation_memory[memory_key] = final_text
             
-            print(f"Completed batch {batch_idx//batch_size + 1}/{(len(texts_to_translate) + batch_size - 1)//batch_size}")
+            batch_num = batch_idx//batch_size + 1
+            total_batches = (len(texts_to_translate) + batch_size - 1)//batch_size
+            print(f"✅ Completed batch {batch_num}/{total_batches}")
+
+        print(f"🌐 Translation complete: {translations_added} new translations")
 
     # Update translation memory if enabled
     if memory_file and update_memory and translation_memory:
-        os.makedirs(os.path.dirname(memory_file), exist_ok=True)
+        # Ensure directory exists
+        memory_dir = os.path.dirname(memory_file)
+        if memory_dir:
+            os.makedirs(memory_dir, exist_ok=True)
+        
         with open(memory_file, "w", encoding="utf-8") as f:
             json.dump(translation_memory, f, ensure_ascii=False, indent=2)
-        print(f"Updated translation memory with {len(translation_memory)} entries")
+        print(f"💾 Updated translation memory: {len(translation_memory)} total entries")
 
     return translatable_map
 
@@ -141,7 +180,9 @@ def translate_json_file(
     update_memory=False,
     segment_file=None
 ):
-    """Main translation function with language validation"""
+    """Main translation function with enhanced memory support"""
+    print(f"🚀 Starting translation: {input_file} -> {target_lang}")
+    
     # Auth check
     auth_key = os.getenv("DEEPL_AUTH_KEY")
     if not auth_key:
@@ -154,10 +195,11 @@ def translate_json_file(
     try:
         with open(input_file, "r", encoding="utf-8") as f:
             json_data = json.load(f)
+        print(f"📄 Loaded {len(json_data)} blocks from {input_file}")
     except Exception as e:
         raise ValueError(f"Failed to load {input_file}: {e}")
 
-    # Create translation map
+    # Create translation map with improved memory
     translatable_map = create_efficient_translatable_map(
         json_data=json_data,
         translator=translator,
@@ -211,7 +253,7 @@ def translate_json_file(
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Translate JSON content with enhanced memory support"
+        description="Translate JSON content with enhanced global memory support"
     )
     parser.add_argument("--input", "-i", required=True, 
                        help="Input JSON file")
@@ -224,7 +266,7 @@ def main():
     parser.add_argument("--secondary-lang",
                        help="Secondary source language code")
     parser.add_argument("--memory", "-m", 
-                       help="Path to translation memory file")
+                       help="Path to shared translation memory file")
     parser.add_argument("--update-memory", action="store_true",
                        help="Update translation memory with new translations")
     parser.add_argument("--segments", "-s", 

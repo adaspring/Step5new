@@ -118,8 +118,11 @@ def main():
                        help="Process both translation sources")
     parser.add_argument("--output-dir", default="outputs",
                        help="Base directory for output files")
-    
+    parser.add_argument("--target-lang", required=True,
+                       help="Target language code (e.g., FR, EN)")
+
     args = parser.parse_args()
+    lang = args.target_lang.upper()
     
     # Input validation
     if not any([args.deepl, args.openai, args.both]):
@@ -135,14 +138,7 @@ def main():
         print(f"Error: HTML file {args.html} does not exist")
         sys.exit(1)
 
-    # Extract target language from HTML filename (e.g., "FR" from "file_FR.html")
-    try:
-        lang = Path(args.html).stem.split('_')[-1]  # Gets last underscore segment
-        if not lang.isalpha() or len(lang) != 2:  # Basic language code validation
-            raise ValueError
-    except (IndexError, ValueError):
-        lang = "XX"
-        print("Warning: Could not detect language from filename, using 'XX' as fallback")
+    
     
     # Create output structure
     subdir = os.path.basename(os.path.dirname(args.html))  # e.g., "index"

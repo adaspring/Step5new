@@ -287,8 +287,7 @@ def group_blocks_by_text(flat_sentences_file, translations):
         block_ids = [block_id for block_id, _ in block_list]
         translations_set = {translations.get(block_id, '') for block_id in block_ids}
         
-        # Only reprocess if translations differ
-        if len(translations_set) > 1:
+        # Only reprocess same origin 
             grouped_entries[source_text] = {
                 "block_ids": block_ids,
                 "translations": {block_id: translations.get(block_id, '') for block_id in block_ids}

@@ -1,4 +1,4 @@
-name: Batch Extract, Translate and Refine Content
+name: Batch Extract2, Translate and Refine Content
 
 on:
   workflow_dispatch:

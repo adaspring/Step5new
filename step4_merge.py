@@ -116,8 +116,8 @@ def main():
                        help="Output filename pattern for OpenAI version (use {lang} placeholder)")
     parser.add_argument("--both", action="store_true",
                        help="Process both translation sources")
-    parser.add_argument("--output-dir", default="outputs",
-                       help="Base directory for output files")
+    parser.add_argument("--output-dir", default="",
+                       help="Base directory for output files (if empty, uses same directory as HTML)")
     parser.add_argument("--target-lang", required=True,
                        help="Target language code (e.g., FR, EN)")
 
@@ -138,11 +138,13 @@ def main():
         print(f"Error: HTML file {args.html} does not exist")
         sys.exit(1)
 
+    # Determine output directory
+    if args.output_dir:
+        final_output_dir = args.output_dir
+    else:
+        # Use the same directory as the HTML file
+        final_output_dir = os.path.dirname(args.html)
     
-    
-    # Create output structure
-    subdir = os.path.basename(os.path.dirname(args.html))  # e.g., "index"
-    final_output_dir = os.path.join(args.output_dir, subdir)
     os.makedirs(final_output_dir, exist_ok=True)
     
     # Format output filenames with language code
@@ -183,4 +185,7 @@ def main():
         size = Path(path).stat().st_size if Path(path).exists() else 0
         print(f"{label.upper():<8} {status:<8} {path} ({size:,} bytes)")
     
-    print("\nProcess completed!")
+    print("Process completed!")
+
+if __name__ == "__main__":
+    main()

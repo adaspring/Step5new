@@ -212,18 +212,22 @@ jobs:
               continue
             }
 
-            # Step 4: Merge if enabled
-            if [ "${{ github.event.inputs.merge_translations }}" == "true" ]; then
-              echo "🔗 Step 4: Merging translations for $filename"
-              python step4_merge.py \
-                --html "outputs/$filename/non_translatable.html" \
-                --deepl "outputs/$filename/segments_only.json" \
-                --openai "outputs/$filename/openai_translations.json" \
-                --output-deepl "final_deepl_${{ github.event.inputs.target_lang }}.html" \
-                --output-openai "final_openai_${{ github.event.inputs.target_lang }}.html" \
-                --target-lang "${{ github.event.inputs.target_lang }}" \
-                --output-dir "outputs/$filename" \
-                --both
+            - name: Merge translations into final HTML
+                if: ${{ github.event.inputs.merge_translations == 'true' }}
+                run: |
+                  mkdir -p final_outputs
+                  echo "🔄 Merging translations into final HTML files..."
+    
+                  python step4_merge.py \
+                    --input-dir outputs \
+                    --output-dir final_outputs \
+                    --deepl-dir outputs \
+                    --openai-dir outputs
+    
+                  echo "✅ Merge completed. Final HTML files:"
+                  find final_outputs -type f -name "*.html" | while read file; do
+                    echo "  - $file ($(stat -c%s "$file") bytes)"
+                  done
           
           # Final memory statistics
           if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then
@@ -272,8 +276,9 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-           name: localization-results-${{ github.event.inputs.target_lang }}
-           path: |
-              outputs/
-              global_memory.json
-              memory_report.txt
+          name: localization-results-${{ github.event.inputs.target_lang }}
+          path: |
+            outputs/
+            global_memory.json
+            memory_report.txt
+            final_outputs/

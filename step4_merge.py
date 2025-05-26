@@ -116,8 +116,8 @@ def main():
                        help="Output filename pattern for OpenAI version (use {lang} placeholder)")
     parser.add_argument("--both", action="store_true",
                        help="Process both translation sources")
-    parser.add_argument("--output-dir", default="",
-                       help="Base directory for output files (if empty, uses same directory as HTML)")
+    parser.add_argument("--output-dir", default="outputs",
+                       help="Base directory for output files")
     parser.add_argument("--target-lang", required=True,
                        help="Target language code (e.g., FR, EN)")
 

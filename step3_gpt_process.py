@@ -2,6 +2,7 @@
 import os
 import json
 import openai
+import hashlib
 import time
 import argparse
 from pathlib import Path
@@ -252,6 +253,84 @@ fr: Connecter à votre compte
     
     return final_translations
 
+
+
+def normalize_text(text, length=50):
+    """Normalize and truncate text for hashing/grouping"""
+    return ' '.join(text.lower().strip().split())[:length]
+
+def create_text_hash_map(flat_sentences_file):
+    """Create a mapping from normalized text to list of block IDs"""
+    with open(flat_sentences_file, 'r', encoding='utf-8') as f:
+        data = json.load(f)
+
+    hash_map = {}
+    for category in data:
+        for entry in data[category]:
+            for key, value in entry.items():
+                if key == "tag":
+                    continue
+                norm = normalize_text(value)
+                hash_map.setdefault(norm, []).append((key, value))
+    
+    return hash_map
+
+def group_blocks_by_text(flat_sentences_file, translations):
+    """Create a dict of grouped blocks with shared source text"""
+    hash_map = create_text_hash_map(flat_sentences_file)
+    grouped_entries = {}
+
+    for norm, block_list in hash_map.items():
+        source_text = block_list[0][1]
+        block_ids = [block_id for block_id, _ in block_list]
+        translations_set = {translations.get(block_id, '') for block_id in block_ids}
+
+        # Only reprocess if translations differ
+        if len(translations_set) > 1:
+            grouped_entries[source_text] = {
+                "block_ids": block_ids,
+                "translations": {block_id: translations.get(block_id, '') for block_id in block_ids}
+            }
+
+    return grouped_entries
+
+def prepare_post_gpt_input(grouped_entries):
+    """Format grouped entries into GPT-readable input string"""
+    blocks = []
+    for source_text, data in grouped_entries.items():
+        header = '='.join(data['block_ids']) + f" = {source_text} {{"
+        body = '\n'.join(f"{bid} = \"{text}\"" for bid, text in data['translations'].items())
+        block = f"{header}\n{body}\n}}\n"
+        blocks.append(block)
+    return '\n'.join(blocks)
+
+def run_postprocess_consistency(client, grouped_entries, system_prompt):
+    """Call GPT to harmonize translations and return new translation map"""
+    input_text = prepare_post_gpt_input(grouped_entries)
+    response = client.chat.completions.create(
+        model="gpt-4o",
+        messages=[
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": input_text}
+        ],
+        temperature=0.2,
+        max_tokens=4000
+    )
+
+    content = response.choices[0].message.content.strip()
+    if content.startswith('```json'):
+        content = content.split('```json')[1].split('```')[0].strip()
+    elif content.startswith('```'):
+        content = content.split('```')[1].split('```')[0].strip()
+
+    try:
+        patch = json.loads(content)
+        return patch
+    except json.JSONDecodeError:
+        print("⚠️ Failed to parse GPT postprocess response.")
+        return {}
+        
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="GPT Translation Processor")
     parser.add_argument("--context", required=True, help="translatable_flat_sentences.json")
@@ -297,3 +376,47 @@ if __name__ == "__main__":
         json.dump(final_translations, f, indent=2, ensure_ascii=False)
 
     print(f"\n✅ Saved {len(final_translations)} translations to {args.output}")
+
+    # Step 4: Harmonization begins here
+    try:
+        print("\n🔄 Running post-GPT consistency harmonization...")
+        flat_sentences_path = args.context  # translatable_flat_sentences.json
+        translations_path = args.output    # openai_translations.json
+
+        with open(translations_path, 'r', encoding='utf-8') as f:
+            original_translations = json.load(f)
+
+        grouped = group_blocks_by_text(flat_sentences_path, original_translations)
+
+        if grouped:
+            post_prompt = """
+You will receive groups of block IDs that share similar original English texts.
+
+For each group, review the French translations.
+
+If they differ, choose the most appropriate and natural translation.
+
+Apply that translation to all block IDs in the group.
+
+If they are already consistent, keep them unchanged.
+
+Return a single JSON object like this: { "BLOCK_24": "Grande figure d'homme", "BLOCK_134": "Grande figure d'homme", ... }"""
+            patch = run_postprocess_consistency(client, grouped, post_prompt)
+
+            if patch:
+                updated_count = 0
+                for block_id, new_text in patch.items():
+                    if block_id in original_translations and original_translations[block_id] != new_text:
+                        original_translations[block_id] = new_text
+                        updated_count += 1
+
+                with open(translations_path, "w", encoding="utf-8") as f:
+                    json.dump(original_translations, f, indent=2, ensure_ascii=False)
+                print(f"✅ Harmonization complete. {updated_count} translations updated.")
+            else:
+                print("ℹ️ No changes returned from GPT postprocess step.")
+        else:
+            print("✔️ All translations already consistent. No harmonization needed.")
+
+    except Exception as e:
+        print(f"❌ Postprocess harmonization failed: {e}")

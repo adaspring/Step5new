@@ -261,7 +261,7 @@ if __name__ == "__main__":
     parser.add_argument("--secondary-lang")
     parser.add_argument("--target-lang", required=True)
     parser.add_argument("--batch-size", type=int, default=10, help="Number of entries per batch")
-    parser.add_argument("--output-dir", default=".", help="Output directory for results")
+    parser.add_argument("--output", required=True, help="Output file path for translations")  # Changed from --output-dir
 
     args = parser.parse_args()
     
@@ -279,19 +279,21 @@ if __name__ == "__main__":
     )
     
     # Process with API and get final translations
-final_translations = process_with_api_direct_json(
-    intermediate_file,
-    args.api_key,
-    args,
-    batch_size=args.batch_size
-)
+    final_translations = process_with_api_direct_json(
+        intermediate_file,
+        args.api_key,
+        args,
+        batch_size=args.batch_size
+    )
 
-# Ensure output directory exists before saving
-os.makedirs(args.output_dir, exist_ok=True)  # <-- Fixed indentation (4 spaces)
+    # Normalize and prepare output path
+    args.output = os.path.normpath(args.output)  # Clean up path
+    output_dir = os.path.dirname(args.output)
+    if output_dir:  # Only create directories if path contains them
+        os.makedirs(output_dir, exist_ok=True)
 
-# Save final translations
-output_path = os.path.join(args.output_dir, "openai_translations.json")
-with open(output_path, "w", encoding="utf-8") as f:
-    json.dump(final_translations, f, indent=2, ensure_ascii=False)
+    # Save final translations
+    with open(args.output, "w", encoding="utf-8") as f:
+        json.dump(final_translations, f, indent=2, ensure_ascii=False)
 
-print(f"\n✅ Saved {len(final_translations)} translations to openai_translations.json")
+    print(f"\n✅ Saved {len(final_translations)} translations to {args.output}")

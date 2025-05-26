@@ -226,7 +226,7 @@ jobs:
                 --deepl "outputs/$filename/segments_only.json" \
                 --openai "outputs/$filename/openai_translations.json" \
                 --output-deepl "$deepl_output" \
-                --output-openai "$openai_output" \
+                --output-openai "$openai_output-dir" \
                 --both || {
                 echo "❌ Step 4 failed for $filename"
                 continue

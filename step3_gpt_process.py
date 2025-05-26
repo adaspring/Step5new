@@ -288,10 +288,10 @@ def group_blocks_by_text(flat_sentences_file, translations):
         translations_set = {translations.get(block_id, '') for block_id in block_ids}
         
         # Only reprocess same origin 
-            grouped_entries[source_text] = {
-                "block_ids": block_ids,
-                "translations": {block_id: translations.get(block_id, '') for block_id in block_ids}
-            }
+        grouped_entries[source_text] = {
+            "block_ids": block_ids,
+            "translations": {block_id: translations.get(block_id, '') for block_id in block_ids}
+        }
 
     return grouped_entries
 

@@ -140,6 +140,10 @@ You will receive entries with:
    - **Grammar**: Incorrect verb forms, word order, agreement errors
    - **Terminology**: Inconsistent or inappropriate word choices
    - **Context**: Doesn't fit UI/web context appropriately
+   - **Special cases**: 
+        Common Descriptive Words:
+          Everyday adjectives and nouns in descriptive context → TRANSLATE
+          Examples: "Height", "Width", "Material", "Color", "Size" → Always translate
 
 4.3.DECISION CRITERIA:
 - **Do IMPROVE**: If current translation has any of the above issues
@@ -395,10 +399,6 @@ You will receive groups of block IDs that share similar original English texts.
 For each group, review the translations.
 
 If they differ, choose the most appropriate and natural translation.
-**Special cases**: 
-Common Descriptive Words:
-Everyday adjectives and nouns in descriptive context → TRANSLATE
-Examples: "Height", "Width", "Material", "Color", "Size" → Always translate
 
 Apply that translation to all block IDs in the group.
 

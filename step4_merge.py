@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Step 4: Merge translations back into HTML for multiple files
+Enhanced Step 4: Merge translations back into HTML with batch support
 Creates final translated HTML files using either DeepL or OpenAI translations
 """
 
 import argparse
 import json
 import re
+import sys
 from pathlib import Path
 from bs4 import BeautifulSoup
-import sys
 import os
 
 def load_json(file_path):
@@ -27,6 +27,7 @@ def load_json(file_path):
 def merge_translations_into_html(html_file, translations, output_file):
     """
     Merge translations back into the HTML file by replacing BLOCK_X_SX placeholders
+    with enhanced error handling and reporting
     """
     try:
         with open(html_file, 'r', encoding='utf-8') as f:
@@ -35,128 +36,179 @@ def merge_translations_into_html(html_file, translations, output_file):
         print(f"Error: HTML file {html_file} not found")
         sys.exit(1)
     
-    # Replace each placeholder with its translation
+    # Track replacements and missing translations
     replaced_count = 0
-    for block_id, translation in translations.items():
-        if translation and translation.strip():  # Only replace if translation exists and is not empty
-            # Use regex to replace the exact placeholder
-            pattern = re.escape(block_id)
-            if re.search(pattern, html_content):
-                html_content = re.sub(pattern, translation, html_content)
-                replaced_count += 1
+    missing_count = 0
+    placeholder_pattern = re.compile(r'BLOCK_\d+_S\d+')
+    found_placeholders = set(placeholder_pattern.findall(html_content))
+    
+    # Replace each placeholder with its translation
+    for block_id in found_placeholders:
+        translation = translations.get(block_id, "").strip()
+        if translation:
+            html_content = html_content.replace(block_id, translation)
+            replaced_count += 1
+        else:
+            missing_count += 1
     
     # Parse and prettify the HTML
     try:
         soup = BeautifulSoup(html_content, 'html.parser')
+        output_dir = os.path.dirname(output_file)
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
         
-        # Ensure output directory exists
-        os.makedirs(os.path.dirname(output_file), exist_ok=True)
-        
-        # Write the final HTML
         with open(output_file, 'w', encoding='utf-8') as f:
             f.write(soup.prettify())
         
-        print(f"Successfully merged {replaced_count} translations into {output_file}")
+        print(f"  ✅ Successfully created: {output_file}")
+        print(f"  📊 Merged {replaced_count} translations")
+        if missing_count > 0:
+            print(f"  ⚠️  Warning: {missing_count} placeholders had no translations")
+        
+        # Verify file was created and has content
+        if os.path.exists(output_file):
+            file_size = os.path.getsize(output_file)
+            print(f"  📁 File size: {file_size:,} bytes")
+            return True
+        else:
+            print(f"  ❌ Failed to create output file: {output_file}")
+            return False
         
     except Exception as e:
-        print(f"Error processing HTML: {e}")
-        # If BeautifulSoup fails, write raw content
-        with open(output_file, 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        print(f"Warning: HTML parsing failed, wrote raw content with {replaced_count} replacements to {output_file}")
+        print(f"  ⚠️  HTML parsing failed ({str(e)[:50]}), writing raw content")
+        try:
+            with open(output_file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+            print(f"  ✅ Raw content written to: {output_file}")
+            return True
+        except Exception as write_error:
+            print(f"  ❌ Failed to write file: {write_error}")
+            return False
 
 def validate_translations(translations, translation_source):
-    """Validate translation data and report statistics"""
+    """Enhanced validation with detailed statistics"""
     if not translations:
-        print(f"Warning: No translations found in {translation_source}")
+        print(f"⚠️  Warning: No translations found in {translation_source}")
         return False
     
     total_keys = len(translations)
-    non_empty_translations = sum(1 for v in translations.values() if v and v.strip())
-    empty_translations = total_keys - non_empty_translations
+    non_empty = sum(1 for v in translations.values() if v and v.strip())
+    empty = total_keys - non_empty
     
-    print(f"\n{translation_source} Statistics:")
+    print(f"\n📊 {translation_source} Statistics:")
     print(f"  Total translation keys: {total_keys}")
-    print(f"  Non-empty translations: {non_empty_translations}")
-    print(f"  Empty/missing translations: {empty_translations}")
+    print(f"  Non-empty translations: {non_empty}")
+    print(f"  Empty/missing translations: {empty}")
     
-    if empty_translations > 0:
-        print(f"  Warning: {empty_translations} translations are empty or missing")
-    
-    return non_empty_translations > 0
+    return non_empty > 0
 
-def process_single_file(html_file, deepl_path, openai_path, output_dir):
-    """Process a single HTML file with both translation sources"""
-    filename = os.path.splitext(os.path.basename(html_file))[0]
+def process_translation_set(html_path, translations_path, output_path, label):
+    """Handle a single translation source with better reporting"""
+    print(f"\n🔄 Processing {label} translations...")
+    print(f"  📥 Source: {translations_path}")
+    print(f"  📤 Target: {output_path}")
     
-    # Create output filenames
-    deepl_output = os.path.join(output_dir, f"{filename}_deepl.html")
-    openai_output = os.path.join(output_dir, f"{filename}_openai.html")
+    # Verify input files exist
+    if not os.path.exists(html_path):
+        print(f"  ❌ HTML file not found: {html_path}")
+        return False
     
-    # Process DeepL translations if available
-    if deepl_path and os.path.exists(deepl_path):
-        print(f"\nProcessing DeepL translations for {filename}...")
-        deepl_translations = load_json(deepl_path)
-        
-        if validate_translations(deepl_translations, "DeepL (segments_only.json)"):
-            merge_translations_into_html(html_file, deepl_translations, deepl_output)
-        else:
-            print(f"Skipping DeepL merge for {filename} due to validation failure")
+    if not os.path.exists(translations_path):
+        print(f"  ❌ Translations file not found: {translations_path}")
+        return False
     
-    # Process OpenAI translations if available
-    if openai_path and os.path.exists(openai_path):
-        print(f"\nProcessing OpenAI translations for {filename}...")
-        openai_translations = load_json(openai_path)
-        
-        if validate_translations(openai_translations, "OpenAI (openai_translations.json)"):
-            merge_translations_into_html(html_file, openai_translations, openai_output)
-        else:
-            print(f"Skipping OpenAI merge for {filename} due to validation failure")
+    translations = load_json(translations_path)
+    if validate_translations(translations, label):
+        return merge_translations_into_html(html_path, translations, output_path)
+    return False
 
 def main():
-    parser = argparse.ArgumentParser(description="Merge translations back into HTML files")
-    parser.add_argument("--input-dir", required=True, help="Directory containing non_translatable.html files")
-    parser.add_argument("--output-dir", required=True, help="Output directory for final HTML files")
-    parser.add_argument("--deepl-dir", help="Directory containing segments_only.json files")
-    parser.add_argument("--openai-dir", help="Directory containing openai_translations.json files")
+    parser = argparse.ArgumentParser(
+        description="Merge translations back into HTML file with batch support",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    parser.add_argument("--html", required=True, 
+                       help="Path to non_translatable.html file")
+    parser.add_argument("--deepl", 
+                       help="Path to segments_only.json (DeepL translations)")
+    parser.add_argument("--openai", 
+                       help="Path to openai_translations.json (OpenAI translations)")
+    parser.add_argument("--output-deepl", 
+                       help="Output file for DeepL version (required if --deepl or --both)")
+    parser.add_argument("--output-openai", 
+                       help="Output file for OpenAI version (required if --openai or --both)")
+    parser.add_argument("--both", action="store_true",
+                       help="Process both translation sources")
     
     args = parser.parse_args()
     
-    # Validate inputs
-    if not os.path.exists(args.input_dir):
-        print(f"Error: Input directory {args.input_dir} does not exist")
+    # Input validation
+    if not any([args.deepl, args.openai, args.both]):
+        print("❌ Error: Must specify at least one translation source")
+        print("Use --deepl, --openai, or --both")
         sys.exit(1)
     
-    os.makedirs(args.output_dir, exist_ok=True)
+    if args.both and not all([args.deepl, args.openai]):
+        print("❌ Error: --both requires both --deepl and --openai")
+        sys.exit(1)
     
-    print(f"Processing HTML files from: {args.input_dir}")
-    print("=" * 50)
+    if not Path(args.html).exists():
+        print(f"❌ Error: HTML file {args.html} does not exist")
+        sys.exit(1)
     
-    # Process each HTML file in the input directory
-    processed_files = 0
-    for root, _, files in os.walk(args.input_dir):
-        for file in files:
-            if file == "non_translatable.html":
-                html_path = os.path.join(root, file)
-                filename = os.path.basename(os.path.dirname(root))
-                
-                # Determine paths to translation files
-                deepl_path = None
-                openai_path = None
-                
-                if args.deepl_dir:
-                    deepl_path = os.path.join(args.deepl_dir, filename, "segments_only.json")
-                
-                if args.openai_dir:
-                    openai_path = os.path.join(args.openai_dir, filename, "openai_translations.json")
-                
-                print(f"\nProcessing file: {filename}")
-                process_single_file(html_path, deepl_path, openai_path, args.output_dir)
-                processed_files += 1
+    # Validate output paths are provided
+    if (args.deepl or args.both) and not args.output_deepl:
+        print("❌ Error: --output-deepl is required when using --deepl or --both")
+        sys.exit(1)
     
-    print("\n" + "=" * 50)
-    print(f"Merge process completed! Processed {processed_files} files.")
-    print(f"Output files saved to: {args.output_dir}")
+    if (args.openai or args.both) and not args.output_openai:
+        print("❌ Error: --output-openai is required when using --openai or --both")
+        sys.exit(1)
+    
+    print(f"\n{' Starting HTML Merge Process ':=^60}")
+    print(f"📄 Source HTML: {args.html}")
+    
+    # Process translations
+    results = {}
+    success_count = 0
+    
+    if args.deepl or args.both:
+        print(f"\n🌐 Processing DeepL translations...")
+        success = process_translation_set(
+            args.html, args.deepl, args.output_deepl, "DeepL"
+        )
+        results["DeepL"] = (args.output_deepl, success)
+        if success:
+            success_count += 1
+    
+    if args.openai or args.both:
+        print(f"\n🤖 Processing OpenAI translations...")
+        success = process_translation_set(
+            args.html, args.openai, args.output_openai, "OpenAI"
+        )
+        results["OpenAI"] = (args.output_openai, success)
+        if success:
+            success_count += 1
+    
+    # Final report
+    print(f"\n{' Final Results ':=^60}")
+    for service, (output_path, success) in results.items():
+        status = "✅ SUCCESS" if success else "❌ FAILED"
+        
+        if success and os.path.exists(output_path):
+            size = os.path.getsize(output_path)
+            print(f"{service:<8} {status} - {output_path} ({size:,} bytes)")
+        else:
+            print(f"{service:<8} {status} - {output_path} (file not created)")
+    
+    print(f"\n🎯 Summary: {success_count}/{len(results)} translations processed successfully")
+    
+    if success_count == 0:
+        print("❌ No files were created successfully")
+        sys.exit(1)
+    else:
+        print("✅ Process completed!")
 
 if __name__ == "__main__":
     main()

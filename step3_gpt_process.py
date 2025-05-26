@@ -106,7 +106,6 @@ def process_with_api_direct_json(input_file, api_key, args, max_retries=3, batch
     expected_blocks = count_expected_blocks(input_file)
     print(f"ℹ️ Expecting {len(expected_blocks)} translation blocks in total")
     
-    client = openai.OpenAI(api_key=api_key)
     
     with open(input_file, 'r', encoding='utf-8') as f:
         content = [entry.strip() for entry in f.read().split("\n\n") if entry.strip()]
@@ -343,6 +342,7 @@ if __name__ == "__main__":
     parser.add_argument("--output", required=True, help="Output file path for translations")  # Changed from --output-dir
 
     args = parser.parse_args()
+    client = openai.OpenAI(api_key=args.api_key)
     
     # Validate input files first
     validate_input_files(args.context, args.translated)

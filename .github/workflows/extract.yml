@@ -139,6 +139,7 @@ jobs:
                 echo "❌ Missing required file: $req_file"
                 missing_files=true
               fi
+            
             done
             
             if [ "$missing_files" = true ]; then

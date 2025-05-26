@@ -392,9 +392,13 @@ if __name__ == "__main__":
             post_prompt = """
 You will receive groups of block IDs that share similar original English texts.
 
-For each group, review the French translations.
+For each group, review the translations.
 
 If they differ, choose the most appropriate and natural translation.
+**Special cases**: 
+Common Descriptive Words:
+Everyday adjectives and nouns in descriptive context → TRANSLATE
+Examples: "Height", "Width", "Material", "Color", "Size" → Always translate
 
 Apply that translation to all block IDs in the group.
 

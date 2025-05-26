@@ -406,6 +406,7 @@ Return a single JSON object like this: { "BLOCK_24": "Grande figure d'homme", "B
             post_input_path = os.path.join(os.path.dirname(args.output), "gpt_post_input.txt")
             with open(post_input_path, "w", encoding="utf-8") as f:
                 f.write(post_input_text)
+            print(f"📝 Saved harmonization input to {post_input_path}")
     
             patch = run_postprocess_consistency(client, grouped, post_prompt)
 

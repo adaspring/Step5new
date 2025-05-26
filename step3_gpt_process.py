@@ -143,7 +143,18 @@ You will receive entries with:
    - **Special cases**: 
         --Common Descriptive Words:
             Everyday adjectives and nouns in descriptive context → TRANSLATE
-            Examples: "Height", "Width", "Material", "Color", "Size" → Always translate
+              Examples: "Height", "Width", "Material", "Color", "Size" → Always translate
+        --Date-related abbreviations (like BCE, CE, AD, 5th c.): 
+             Are translated consistently and remain in abbreviated form.
+             Avoid expanding the abbreviations unnecessarily.
+               Example for French translations:
+                 BCE → av. notre ère
+                  CE → de notre ère
+                 c. → v.
+                 for "century" → use "s.” or "siècle" (e.g., 5e s. = 5th century)
+
+
+
 4.3.DECISION CRITERIA:
 - **Do IMPROVE**: If current translation has any of the above issues
 - **Do not IMPROVE**: If current translation is accurate, natural, and appropriate
@@ -288,7 +299,7 @@ def group_blocks_by_text(flat_sentences_file, translations):
         translations_set = {translations.get(block_id, '') for block_id in block_ids}
         
         # Only reprocess same origin 
-        if len(translations_set) > 1 or len(block_ids) > 1:
+        if len(translations_set) > 1:
             grouped_entries[source_text] = {
                 "block_ids": block_ids,
                 "translations": {block_id: translations.get(block_id, '') for block_id in block_ids}
@@ -398,14 +409,6 @@ You will receive groups of block IDs that share similar original English texts.
 For each group, review the translations.
 
 If they differ, choose the most appropriate and natural translation.
---Date-related abbreviations (like BCE, CE, AD, 5th c.): 
-             Are translated consistently and remain in abbreviated form.
-             Avoid expanding the abbreviations unnecessarily.
-             Example for French translations:
-               BCE → av. notre ère
-                CE → de notre ère
-                c. → v.
-                for "century" → use "s.” or "siècle" (e.g., 5e s. = 5th century)
 
 Apply that translation to all block IDs in the group.
 

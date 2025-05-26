@@ -403,7 +403,7 @@ If they are already consistent, keep them unchanged.
 Return a single JSON object like this: { "BLOCK_24": "Grande figure d'homme", "BLOCK_134": "Grande figure d'homme", ... }"""
             # Save GPT harmonization input file
             post_input_text = prepare_post_gpt_input(grouped)
-            post_input_path = "gpt_post_input.txt"
+            post_input_path = os.path.join(os.path.dirname(args.output), "gpt_post_input.txt")
             with open(post_input_path, "w", encoding="utf-8") as f:
                 f.write(post_input_text)
     

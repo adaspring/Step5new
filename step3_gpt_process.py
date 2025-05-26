@@ -285,6 +285,7 @@ def group_blocks_by_text(flat_sentences_file, translations):
     for norm, block_list in hash_map.items():
         source_text = block_list[0][1]
         block_ids = [block_id for block_id, _ in block_list]
+        translations_set = {translations.get(block_id, '') for block_id in block_ids}
         
         # Only reprocess if translations differ
         if len(translations_set) > 1:

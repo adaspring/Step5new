@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   Exemple de titre
+  </title>
+  <!-- SEO meta tags (included and excluded) -->
+  <meta content="Il s'agit d'une description." name="description"/>
+  <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+  <meta content="Titre Open Graph" property="og:title"/>
+  <meta content="https://example.com" property="og:url"/>
+ </head>
+ <body>
+  <!-- Translatable tags -->
+  <p>
+   Il s'agit d'un paragraphe.
+  </p>
+  <span>
+   Il s'agit d'un span.
+  </span>
+  <div>
+   Il s'agit d'un div.
+  </div>
+  <h1>
+   Titre principal
+  </h1>
+  <h2>
+   Sous-titre
+  </h2>
+  <h3>
+   Sous-sous-titre
+  </h3>
+  <label>
+   Label Text
+  </label>
+  <button>
+   Click me
+  </button>
+  <li>
+   Élément de la liste
+  </li>
+  Table cell
+Table header
+  <a href="#">
+   Texte du lien
+  </a>
+  <strong>
+   Texte fort
+  </strong>
+  <em>
+   Texte en italique
+  </em>
+  <b>
+   Texte en gras
+  </b>
+  <i>
+   Texte en italique
+  </i>
+  Caption text
+  <summary>
+   Texte de synthèse
+  </summary>
+  <figcaption>
+   Légende de la figure
+  </figcaption>
+  <option>
+   Option 1
+  </option>
+  <optgroup label="Group Label">
+   Groupe
+  </optgroup>
+  <legend>
+   Texte de la légende
+  </legend>
+  <mark>
+   Texte marqué
+  </mark>
+  <output>
+   Valeur de sortie
+  </output>
+  <details>
+   Détails ici
+  </details>
+  <time datetime="2024-01-01">
+   1er janvier 2024
+  </time>
+  <!-- Translatable attributes -->
+  <img alt="Description de l'image" data-caption="Légende de l'image" src="img.jpg" title="Titre de l'image"/>
+  <input aria-label="Entrée du nom" aria-placeholder="Placeholder" data-label="Champ du nom" placeholder="Saisir le nom"/>
+  <!-- Elements with blocked attributes (should not extract these) -->
+  <div class="not-translatable" id="block-me" style="color: red;">
+   Bloqué par l'attribut
+  </div>
+  <!-- Skipped parent tags -->
+  <script>
+   var example = "This should be skipped";
+  </script>
+  <style>
+   .class { display: none; }
+  </style>
+  <code>
+   Some inline code
+  </code>
+  <pre>Preformatted text</pre>
+  <noscript>
+   This is a noscript block
+  </noscript>
+  <template>
+   <div>
+    Contenu du modèle
+   </div>
+  </template>
+  <svg>
+   <text>
+    SVG text
+   </text>
+  </svg>
+  <canvas>
+   Your browser does not support canvas
+  </canvas>
+  <noframes>
+   This browser does not support frames.
+  </noframes>
+  <object data="movie.swf">
+  </object>
+  <embed src="file.swf"/>
+  <base href="https://example.com/"/>
+  <map name="examplemap">
+  </map>
+  <!-- Translate attribute edge cases -->
+  <div translate="no">
+   <p>
+    This should NOT be translated.
+   </p>
+  </div>
+  <div translate="yes">
+   <span>
+    Ceci devrait être traduit.
+   </span>
+  </div>
+  <!-- Additional Test Cases for translate= attribute logic -->
+  <!-- Case 1: Parent translate="yes" with child translate="no" → NOT translated -->
+  <div translate="yes">
+   <p translate="no">
+    Case 1: This should NOT be translated
+   </p>
+  </div>
+  <!-- Case 2: Parent translate="no" with child translate="yes" → Translated -->
+  <div translate="no">
+   <p translate="yes">
+    Cas 2 : Ceci devrait être traduit
+   </p>
+  </div>
+  <!-- Case 3: Grandparent translate="no" with parent translate="yes" → Translated -->
+  <div translate="no">
+   <div translate="yes">
+    <p>
+     Cas 3 : Ceci devrait être traduit
+    </p>
+   </div>
+  </div>
+  <!-- Case 4: Parent translate="yes" and two children, one with no override, one with translate="no" -->
+  <div translate="yes">
+   <p>
+    Cas 4a : Ceci devrait être traduit
+   </p>
+   <p translate="no">
+    Case 4b: This should NOT be translated
+   </p>
+  </div>
+  <p>
+   E = mc²
+  </p>
+  → Skipped (no lexical context)
+  <p>
+   Einstein: E = mc²
+  </p>
+  → Kept (lexical words exist)
+  <div class="math">
+   x²
+  </div>
+  → Skipped (math markup)
+  <p>
+   x = a + b
+  </p>
+  # symbol-heavy
+  <p>
+   Prix final = base + taxe
+  </p>
+  # content-heavy
+  <p>
+   Prix final = (2x(base)+taxe)/(2x4,8)
+  </p>
+  <p>
+   苹果
+  </p>
+  <p>
+   苹果是一家美国公司。
+  </p>
+  <h4>
+   Collection de Grae
+  </h4>
+  <p>
+   <a class="inherit-style" href="https://transitionmagazine.fas.harvard.edu/home/current-issue/was-bayard-rustin-the-most-important-collector-of-african-antiquities-in-the-1950s/">
+    La collection Grae
+   </a>
+   des terres cuites Nok, est la plus importante et la plus vaste collection d'art nigérian ancien authentique en dehors du Nigeria. Cette collection, donnée à Yale, ajoute une couche de profondeur historique en révélant comment des objets liés aux mouvements anticoloniaux et à l'activisme de la diaspora noire sont entrés dans les institutions occidentales.
+   <button aria-controls="content2" aria-expanded="false" class="read-more">
+    Afficher plus...
+   </button>
+  </p>
+  p&gt;English: Apple
+  <p>
+  </p>
+  <p>
+   Manzana
+  </p>
+  <p>
+   La manzana
+  </p>
+  <p>
+   La manzana es fruta
+  </p>
+  <p>
+   Pomme
+  </p>
+  <p>
+   苹果
+  </p>
+  <p>
+   सेब
+  </p>
+  <p>
+   Mela
+  </p>
+  <p>
+   L'anglais : Ceci est une phrase test. Il devrait être détecté comme étant de l'anglais.
+  </p>
+  <p>
+   Il s'agit d'une phrase test. Il devrait être détecté comme étant de l'anglais.
+  </p>
+  <p>
+   Spanish: Esta es una oración de prueba. Debería detectarse como español.
+  </p>
+  <p>
+   Spanish: Esta es una x = a + b oración de prueba. Debería detectarse como español.
+  </p>
+  <p>
+   Spanish: Esta es una, x = a + b, oración de prueba. Debería detectarse como español.
+  </p>
+  <p>
+   x = a + b, oración de prueba. Debería detectarse como español.
+  </p>
+  <p>
+   Esta es una oración de prueba. Doit être détecté comme espagnol : espagnol
+  </p>
+  <p>
+   Ceci est une phrase de test. Elle devrait être détectée comme français.
+  </p>
+  <p>
+   这是一个测试句子。 它应该被检测为中文。
+  </p>
+  <p>
+   Questa è una frase di prova. Dovrebbe essere rilevata come italiano.
+  </p>
+  <p>
+   यह एक परीक्षण वाक्य है। इसे हिंदी के रूप में पहचाना जाना चाहिए।
+  </p>
+  <!-- JSON-LD with mixed keys -->
+  <script type="application/ld+json">
+   {
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "name": "Titre de la vidéo",
+  "description": "Il s'agit d'une vidéo sur quelque chose.",
+  "uploadDate": "2024-05-11",
+  "thumbnailUrl": "https://example.com/thumbnail.jpg",
+  "about": "Sujet de la vidéo",
+  "embedUrl": "https://example.com/embed.mp4"
+}
+  </script>
+ </body>
+</html>

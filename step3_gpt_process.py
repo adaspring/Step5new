@@ -141,10 +141,17 @@ You will receive entries with:
    - **Terminology**: Inconsistent or inappropriate word choices
    - **Context**: Doesn't fit UI/web context appropriately
    - **Special cases**: 
-        Common Descriptive Words:
-          Everyday adjectives and nouns in descriptive context → TRANSLATE
-          Examples: "Height", "Width", "Material", "Color", "Size" → Always translate
-
+        --Common Descriptive Words:
+            Everyday adjectives and nouns in descriptive context → TRANSLATE
+            Examples: "Height", "Width", "Material", "Color", "Size" → Always translate
+        --Date-related abbreviations (like BCE, CE, AD, 5th c.): 
+             Are translated consistently and remain in abbreviated form.
+             Avoid expanding the abbreviations unnecessarily.
+             Example for French translations:
+               BCE → av. notre ère
+                CE → de notre ère
+                c. → v.
+                for "century" → use "s.” or "siècle" (e.g., 5e s. = 5th century)
 4.3.DECISION CRITERIA:
 - **Do IMPROVE**: If current translation has any of the above issues
 - **Do not IMPROVE**: If current translation is accurate, natural, and appropriate

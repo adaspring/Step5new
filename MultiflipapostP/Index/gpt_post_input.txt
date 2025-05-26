@@ -1,0 +1,19 @@
+BLOCK_7_S1=BLOCK_8_S1=BLOCK_104_S1 = Home {
+BLOCK_7_S1=BLOCK_8_S1 = ""
+BLOCK_104_S1 = "Accueil"
+}
+
+BLOCK_9_S1=BLOCK_25_S1=BLOCK_97_S1 = Nok Terracottas {
+BLOCK_9_S1=BLOCK_25_S1 = ""
+BLOCK_97_S1 = "Nok Terracottas"
+}
+
+BLOCK_14_S1=BLOCK_30_S1=BLOCK_99_S1 = African Bronzes {
+BLOCK_14_S1=BLOCK_30_S1 = ""
+BLOCK_99_S1 = "Bronzes africains"
+}
+
+BLOCK_20_S1=BLOCK_33_S1=BLOCK_101_S1 = Ritual Artifacts {
+BLOCK_20_S1=BLOCK_33_S1 = ""
+BLOCK_101_S1 = "Artefacts rituels"
+}

@@ -1,0 +1,263 @@
+name: Batch Extract, Translate and Refine Content
+
+on:
+  workflow_dispatch:
+    inputs:
+      lang:
+        description: "Primary language"
+        required: true
+        default: "en"
+        type: choice
+        options: [en, fr, es, zh, de, pt, it]
+      secondary_lang:
+        description: "Secondary language"
+        required: false
+        default: ""
+        type: choice
+        options: ["", en, fr, es, zh, de, pt, it]
+      target_lang:
+        description: "Target language"
+        required: true
+        default: "FR"
+        type: choice
+        options: [FR, EN, ES, DE, IT, PT, ZH]
+      merge_translations:
+        description: "Create final HTML files"
+        required: false
+        default: true
+        type: boolean
+      use_memory:
+        description: "Use translation memory"
+        required: false
+        default: true
+        type: boolean
+
+env:
+  DEEPL_AUTH_KEY: ${{ secrets.DEEPL_AUTH_KEY }}
+  OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+
+jobs:
+  localization_pipeline:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install beautifulsoup4 spacy html5lib regex pypinyin langdetect deepl openai
+          python -m spacy download en_core_web_sm
+          python -m spacy download zh_core_web_sm
+          python -m spacy download fr_core_news_sm
+          python -m spacy download es_core_news_sm
+          python -m spacy download de_core_news_sm
+          python -m spacy download it_core_news_sm
+          python -m spacy download pt_core_news_sm
+          python -m spacy download ru_core_news_sm
+          python -m spacy download el_core_news_sm
+          python -m spacy download xx_ent_wiki_sm
+
+      - name: Initialize global memory file
+        run: |
+          # Create global memory file that persists across all files
+          echo "{}" > global_memory.json
+          echo "🧠 Initialized global translation memory"
+
+      - name: Check for HTML files
+        run: |
+          if [ ! -d "upload" ] || [ -z "$(ls -A upload/*.html 2>/dev/null)" ]; then
+            echo "❌ No HTML files found in upload/ directory"
+            exit 1
+          fi
+          echo "📁 Found HTML files:"
+          ls -la upload/*.html
+          echo "📊 Total files to process: $(ls upload/*.html | wc -l)"
+
+      - name: Process all HTML files with shared memory
+        run: |
+          mkdir -p outputs
+          processed_count=0
+          total_files=$(ls upload/*.html | wc -l)
+          
+          echo "🔄 Starting batch processing of $total_files files with shared memory..."
+          
+          # Process each HTML file with shared memory
+          for html_file in upload/*.html; do
+            # Check if file exists (handle case where glob doesn't match)
+            if [ ! -f "$html_file" ]; then
+              echo "⚠️ No HTML files found matching pattern"
+              continue
+            fi
+            
+            # Get base filename without extension
+            filename=$(basename "$html_file" .html)
+            processed_count=$((processed_count + 1))
+            
+            echo ""
+            echo "🔄 Processing file $processed_count/$total_files: $filename"
+            echo "📄 File: $html_file"
+            
+            # Create output directory for this file
+            mkdir -p "outputs/$filename"
+            
+            # Step 1: Extract
+            echo "📤 Step 1: Extracting content from $html_file"
+            if [ -z "${{ github.event.inputs.secondary_lang }}" ]; then
+              python step1_extract.py "$html_file" \
+                --lang "${{ github.event.inputs.lang }}" \
+                --output-dir "outputs/$filename" || {
+                echo "❌ Step 1 failed for $filename"
+                continue
+              }
+            else
+              python step1_extract.py "$html_file" \
+                --lang "${{ github.event.inputs.lang }}" \
+                --secondary-lang "${{ github.event.inputs.secondary_lang }}" \
+                --output-dir "outputs/$filename" || {
+                echo "❌ Step 1 failed for $filename"
+                continue
+              }
+            fi
+            
+            # Verify Step 1 outputs exist before proceeding
+            required_files=(
+              "outputs/$filename/translatable_flat.json"
+              "outputs/$filename/translatable_flat_sentences.json"
+              "outputs/$filename/non_translatable.html"
+            )
+            
+            missing_files=false
+            for req_file in "${required_files[@]}"; do
+              if [ ! -f "$req_file" ]; then
+                echo "❌ Missing required file: $req_file"
+                missing_files=true
+              fi
+            done
+            
+            if [ "$missing_files" = true ]; then
+              echo "❌ Skipping $filename due to missing Step 1 outputs"
+              continue
+            fi
+
+            # Show memory stats before processing
+            if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then
+              memory_entries=$(jq '. | length' global_memory.json 2>/dev/null || echo "0")
+              echo "🧠 Current memory entries: $memory_entries"
+            fi
+
+            # Step 2: Translate with SHARED global memory
+            echo "🌐 Step 2: Translating content for $filename (using shared memory)"
+            if [ -z "${{ github.event.inputs.secondary_lang }}" ]; then
+              python step2_translate.py \
+                --input "outputs/$filename/translatable_flat.json" \
+                --output "outputs/$filename/translations.json" \
+                --segments "outputs/$filename/segments_only.json" \
+                --lang "${{ github.event.inputs.target_lang }}" \
+                --primary-lang "${{ github.event.inputs.lang }}" \
+                $(if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then \
+                  echo "--memory global_memory.json --update-memory"; \
+                fi) || {
+                echo "❌ Step 2 failed for $filename"
+                continue
+              }
+            else
+              python step2_translate.py \
+                --input "outputs/$filename/translatable_flat.json" \
+                --output "outputs/$filename/translations.json" \
+                --segments "outputs/$filename/segments_only.json" \
+                --lang "${{ github.event.inputs.target_lang }}" \
+                --primary-lang "${{ github.event.inputs.lang }}" \
+                --secondary-lang "${{ github.event.inputs.secondary_lang }}" \
+                $(if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then \
+                  echo "--memory global_memory.json --update-memory"; \
+                fi) || {
+                echo "❌ Step 2 failed for $filename"
+                continue
+              }
+            fi
+            
+            # Show memory stats after processing
+            if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then
+              memory_entries_after=$(jq '. | length' global_memory.json 2>/dev/null || echo "0")
+              new_entries=$((memory_entries_after - memory_entries))
+              echo "🧠 Memory updated: +$new_entries entries (total: $memory_entries_after)"
+            fi
+            
+            # Verify Step 2 outputs
+            if [ ! -f "outputs/$filename/segments_only.json" ]; then
+              echo "❌ Step 2 failed - missing segments_only.json for $filename"
+              continue
+            fi
+
+            # Step 3: GPT refinement
+            echo "🤖 Step 3: GPT refinement for $filename"
+            python step3_gpt_process.py \
+              --context "outputs/$filename/translatable_flat_sentences.json" \
+              --translated "outputs/$filename/segments_only.json" \
+              --api-key "${{ env.OPENAI_API_KEY }}" \
+              --primary-lang "${{ github.event.inputs.lang }}" \
+              --target-lang "${{ github.event.inputs.target_lang }}" \
+              $(if [ -n "${{ github.event.inputs.secondary_lang }}" ]; then \
+                echo "--secondary-lang ${{ github.event.inputs.secondary_lang }}"; \
+              fi) \
+              --output "outputs/$filename/openai_translations.json" || {
+              echo "❌ Step 3 failed for $filename"
+              continue
+            }
+
+            
+          
+          # Final memory statistics
+          if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then
+            final_memory_count=$(jq '. | length' global_memory.json 2>/dev/null || echo "0")
+            echo ""
+            echo "🧠 Final translation memory statistics:"
+            echo "   Total cached translations: $final_memory_count"
+            echo "   Memory file size: $(du -h global_memory.json | cut -f1)"
+          fi
+          
+          echo ""
+          echo "🎉 Batch processing complete! Processed $processed_count files."
+
+      - name: Generate memory report
+        if: ${{ github.event.inputs.use_memory == 'true' }}
+        run: |
+          echo "📊 Translation Memory Report:" > memory_report.txt
+          echo "=========================" >> memory_report.txt
+          echo "Date: $(date)" >> memory_report.txt
+          echo "Source Languages: ${{ github.event.inputs.lang }}$(if [ -n '${{ github.event.inputs.secondary_lang }}' ]; then echo ', ${{ github.event.inputs.secondary_lang }}'; fi)" >> memory_report.txt
+          echo "Target Language: ${{ github.event.inputs.target_lang }}" >> memory_report.txt
+          echo "" >> memory_report.txt
+          
+          if [ -f "global_memory.json" ]; then
+            total_entries=$(jq '. | length' global_memory.json)
+            echo "Total cached translations: $total_entries" >> memory_report.txt
+            echo "Memory file size: $(du -h global_memory.json | cut -f1)" >> memory_report.txt
+            echo "" >> memory_report.txt
+            
+            # Show sample of cached translations (first 5)
+            echo "Sample cached translations:" >> memory_report.txt
+            jq -r 'to_entries | .[0:5] | .[] | "- \(.key) -> \(.value)"' global_memory.json >> memory_report.txt 2>/dev/null || echo "No samples available" >> memory_report.txt
+          else
+            echo "No memory file found" >> memory_report.txt
+          fi
+          
+          cat memory_report.txt
+
+     
+      
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+           name: localization-results-${{ github.event.inputs.target_lang }}
+           path: |
+              outputs/
+              global_memory.json
+              memory_report.txt

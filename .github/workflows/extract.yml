@@ -213,7 +213,8 @@ jobs:
               continue
             }
 
-            - name: Merge translations into final HTML
+
+  
                 if: ${{ github.event.inputs.merge_translations == 'true' }}
                 run: |
                   mkdir -p final_outputs

@@ -147,12 +147,6 @@ You will receive entries with:
         --Date-related abbreviations (like BCE, CE, AD, 5th c.): 
              Are translated consistently and remain in abbreviated form.
              Avoid expanding the abbreviations unnecessarily.
-               Example for French translations:
-                 BCE → av. notre ère
-                  CE → de notre ère
-                 c. → v.
-                 for "century" → use "s.” or "siècle" (e.g., 5e s. = 5th century)
-
 
 
 4.3.DECISION CRITERIA:

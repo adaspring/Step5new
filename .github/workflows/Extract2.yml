@@ -1,4 +1,4 @@
-name: Batch Extract2, Translate and Refine Content
+name: 0Batch Extract, Translate and Refine Content
 
 on:
   workflow_dispatch:
@@ -212,7 +212,45 @@ jobs:
               continue
             }
 
+            # Step 4: Merge if enabled
+            if [ "${{ github.event.inputs.merge_translations }}" == "true" ]; then
+              echo "🔗 Step 4: Merging translations for $filename"
+              
+              # Define output file paths
+              deepl_output="outputs/$filename/final_deepl_${{ github.event.inputs.target_lang }}.html"
+              openai_output="outputs/$filename/final_openai_${{ github.event.inputs.target_lang }}.html"
+              
+              # Run step4_merge.py with explicit output paths
+              python step4_merge.py \
+                --html "outputs/$filename/non_translatable.html" \
+                --deepl "outputs/$filename/segments_only.json" \
+                --openai "outputs/$filename/openai_translations.json" \
+                --output-deepl "$deepl_output" \
+                --output-openai "$openai_output" \
+                --both || {
+                echo "❌ Step 4 failed for $filename"
+                continue
+              }
+              
+              # Verify output files were created
+              echo "📋 Verifying Step 4 outputs for $filename:"
+              if [ -f "$deepl_output" ]; then
+                size=$(du -h "$deepl_output" | cut -f1)
+                echo "  ✅ DeepL final file: $deepl_output ($size)"
+              else
+                echo "  ❌ DeepL final file missing: $deepl_output"
+              fi
+              
+              if [ -f "$openai_output" ]; then
+                size=$(du -h "$openai_output" | cut -f1)
+                echo "  ✅ OpenAI final file: $openai_output ($size)"
+              else
+                echo "  ❌ OpenAI final file missing: $openai_output"
+              fi
+            fi
             
+            echo "✅ Completed processing: $filename"
+          done
           
           # Final memory statistics
           if [ "${{ github.event.inputs.use_memory }}" == "true" ]; then
@@ -225,6 +263,14 @@ jobs:
           
           echo ""
           echo "🎉 Batch processing complete! Processed $processed_count files."
+
+      - name: List all output files
+        run: |
+          echo "📁 Complete directory structure:"
+          find outputs -type f -name "*.html" -o -name "*.json" | sort
+          echo ""
+          echo "🎯 Final HTML files specifically:"
+          find outputs -name "final_*.html" -exec ls -lh {} \; | sort
 
       - name: Generate memory report
         if: ${{ github.event.inputs.use_memory == 'true' }}
@@ -251,13 +297,39 @@ jobs:
           
           cat memory_report.txt
 
-     
-      
+      - name: Generate final summary
+        run: |
+          echo "📋 Final Processing Summary:" > processing_summary.txt
+          echo "============================" >> processing_summary.txt
+          echo "Date: $(date)" >> processing_summary.txt
+          echo "Configuration:" >> processing_summary.txt
+          echo "  Primary Language: ${{ github.event.inputs.lang }}" >> processing_summary.txt
+          echo "  Secondary Language: ${{ github.event.inputs.secondary_lang }}" >> processing_summary.txt
+          echo "  Target Language: ${{ github.event.inputs.target_lang }}" >> processing_summary.txt
+          echo "  Merge Translations: ${{ github.event.inputs.merge_translations }}" >> processing_summary.txt
+          echo "  Use Memory: ${{ github.event.inputs.use_memory }}" >> processing_summary.txt
+          echo "" >> processing_summary.txt
+          
+          # Count files processed
+          total_input=$(ls upload/*.html 2>/dev/null | wc -l)
+          total_outputs=$(find outputs -name "final_*.html" 2>/dev/null | wc -l)
+          
+          echo "Files Processed:" >> processing_summary.txt
+          echo "  Input HTML files: $total_input" >> processing_summary.txt
+          echo "  Final output files: $total_outputs" >> processing_summary.txt
+          echo "" >> processing_summary.txt
+          
+          echo "Output Files Created:" >> processing_summary.txt
+          find outputs -name "final_*.html" -exec basename {} \; | sort >> processing_summary.txt
+          
+          cat processing_summary.txt
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-           name: localization-results-${{ github.event.inputs.target_lang }}
-           path: |
-              outputs/
-              global_memory.json
-              memory_report.txt
+          name: localization-results-${{ github.event.inputs.target_lang }}
+          path: |
+            outputs/
+            global_memory.json
+            memory_report.txt
+            processing_summary.txt

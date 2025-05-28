@@ -1,0 +1,31 @@
+BLOCK_5_S1=BLOCK_7_S1=BLOCK_154_S1 = Home {
+BLOCK_5_S1=BLOCK_7_S1 = ""
+BLOCK_154_S1 = "Accueil"
+}
+
+BLOCK_128_S1=BLOCK_138_S1=BLOCK_144_S1=BLOCK_150_S1 = https://res.cloudinary.com/dc0pgvkii/image/upload/large-man-bust-4_xbm3sy.jpg {
+BLOCK_128_S1 = "https://res.cloudinary.com/dc0pgvkii/image/upload/large-man-bust-4_xbm3sy.jpg"
+BLOCK_138_S1 = "https://res.cloudinary.com/dc0pgvkii/image/upload/large-man-bust-4_xbm3sy.jpg"
+BLOCK_144_S1 = "https://res.cloudinary.com/dc0pgvkii/image/upload/short-man-bust-1_tcjwom.jpg"
+BLOCK_150_S1 = "https://res.cloudinary.com/dc0pgvkii/image/upload/man-head-3_vtbj8q.jpg"
+}
+
+BLOCK_11_S1=BLOCK_40_S1=BLOCK_146_S1 = Man Head {
+BLOCK_11_S1=BLOCK_40_S1 = ""
+BLOCK_146_S1 = "Man Head"
+}
+
+BLOCK_85_S1=BLOCK_96_S1=BLOCK_106_S1 = Thermoluminescence Certificate {
+BLOCK_85_S1 = "Certificat de thermoluminescence"
+BLOCK_96_S1=BLOCK_106_S1 = ""
+}
+
+BLOCK_24_S1=BLOCK_134_S1 = Large Man Figure {
+BLOCK_24_S1 = "Large Man Figure"
+BLOCK_134_S1 = "Grande figure d'homme"
+}
+
+BLOCK_32_S1=BLOCK_140_S1 = Short Man Figure {
+BLOCK_32_S1 = "Short Man Figure"
+BLOCK_140_S1 = "Petite figure d'homme"
+}

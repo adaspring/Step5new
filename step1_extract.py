@@ -192,9 +192,15 @@ def load_spacy_model(lang_code):
 
 def is_translatable_text(tag):
     """Determine if the given tag's text should be translated."""
-    for parent in tag.parents:
-        if parent.name and 'class' in parent.attrs and 'language-switcher' in parent.attrs['class']:
-            return False
+    # ===== NEW: Skip aria-label inside language-switcher =====
+    for parent in tag.parents:  # Checks ALL ancestors up the tree
+        if (
+            getattr(tag, 'name', None) == 'a' and 
+            'aria-label' in tag.attrs and  # Checks the <a> tag itself
+            'language-switcher' in parent.get('class', [])
+        ):
+
+    # [Keep all your existing logic below...]
     
     # Check translate attribute inheritance hierarchy
     current_element = tag.parent

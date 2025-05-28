@@ -192,17 +192,17 @@ def load_spacy_model(lang_code):
 
 def is_translatable_text(tag):
     """Determine if the given tag's text should be translated."""
+    # ===== NEW ADDITION ===== (language-switcher exclusion)
+    # Skip if any parent has language-switcher class
+    
+
+def is_translatable_text(tag):
+    """Determine if the given tag's text should be translated."""
     # ===== NEW: Skip aria-label inside language-switcher =====
-    for parent in tag.parents:  # Checks ALL ancestors up the tree
-        if (
-            getattr(tag, 'name', None) == 'a' and 
-            'aria-label' in tag.attrs and  # Checks the <a> tag itself
-            'language-switcher' in parent.get('class', [])
-        ):
+    for parent in tag.parents:
+        if parent.name and 'class' in parent.attrs and 'language-switcher' in parent.attrs['class']:
             return False
 
-    # [Keep all your existing logic below...]
-    
     # Check translate attribute inheritance hierarchy
     current_element = tag.parent
     translate_override = None
@@ -402,6 +402,16 @@ def extract_translatable_html(input_path, lang_code, secondary_lang=None, output
                 block_counter += 1
 
     for tag in soup.find_all():
+        
+        is_in_language_switcher = False
+        for parent in tag.parents:
+            if parent.name and 'class' in parent.attrs and 'language-switcher' in parent.attrs['class']:
+                is_in_language_switcher = True
+                break
+    # Skip attribute processing for tags inside language-switcher
+        if is_in_language_switcher:
+          continue
+        
         for attr in TRANSLATABLE_ATTRS:
             if (
                 attr in tag.attrs and 

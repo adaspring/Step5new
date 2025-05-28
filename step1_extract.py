@@ -199,6 +199,7 @@ def is_translatable_text(tag):
             'aria-label' in tag.attrs and  # Checks the <a> tag itself
             'language-switcher' in parent.get('class', [])
         ):
+            return False
 
     # [Keep all your existing logic below...]
     

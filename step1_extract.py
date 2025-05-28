@@ -54,7 +54,7 @@ TRANSLATABLE_JSONLD_KEYS = {
 }
 
 SKIP_PARENTS = {
-    "script", "style", "code", "language-switcher", "pre", "noscript", "template", "svg", "canvas",
+    "script", "style", "code", "pre", "noscript", "template", "svg", "canvas",
     "frameset", "frame", "noframes", "object", "embed", "base", "map"
 }
 
@@ -192,6 +192,10 @@ def load_spacy_model(lang_code):
 
 def is_translatable_text(tag):
     """Determine if the given tag's text should be translated."""
+    for parent in tag.parents:
+        if parent.name and 'class' in parent.attrs and 'language-switcher' in parent.attrs['class']:
+            return False
+    
     # Check translate attribute inheritance hierarchy
     current_element = tag.parent
     translate_override = None

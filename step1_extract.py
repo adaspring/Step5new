@@ -54,7 +54,7 @@ TRANSLATABLE_JSONLD_KEYS = {
 }
 
 SKIP_PARENTS = {
-    "script", "style", "code", "pre", "noscript", "template", "svg", "canvas",
+    "script", "style", "code", "div.language-switcher”, "pre", "noscript", "template", "svg", "canvas",
     "frameset", "frame", "noframes", "object", "embed", "base", "map"
 }
 

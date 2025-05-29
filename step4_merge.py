@@ -58,10 +58,16 @@ def post_process_html(html_content, output_file, target_lang):
             for link in switcher.find_all('a'):
                 classes = link.get('class', [])
                 if 'active' in classes:
-                    classes.remove('active')
-                if link['href'].endswith(f'-{target_lang}.html'):
+                  classes.remove('active')
+        
+                # More precise matching for language switcher
+                href = link['href']
+                # Check if this is the link for the current target language
+                if (href.endswith(f'-{target_lang}.html') or 
+                    (target_lang == 'en' and href.endswith('.html') and not re.search(r'-(?:fr|es|zh)\.html$', href))):
                     classes.append('active')
                     link['class'] = classes
+        
         
         # 4. Generate final output path (with language suffix)
         output_path = Path(output_file)

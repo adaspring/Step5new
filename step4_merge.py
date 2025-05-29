@@ -39,19 +39,29 @@ def post_process_html(html_content, output_file, target_lang):
         if soup.html:
             soup.html['lang'] = target_lang
         
-        # 2. Process internal links
-        # 2. Process internal links
-        link_pattern = re.compile(r'^(?!http|#|mailto:).*\.html$')
+        # 2. Process internal links (only base versions without language suffixes)
+        link_pattern = re.compile(r'^(?!http|#|mailto:).*\.html')
         for link in soup.find_all('a', href=link_pattern):
             href = link['href']
-            base, *extra = href.split('?')
     
-        # Only process links without language suffixes (base versions)
-            if not re.search(r'-(?:fr|es|zh|en)\.html', base):
-                 new_href = base.replace('.html', f'-{target_lang}.html')
-                 if extra:
-                     new_href += '?' + '?'.join(extra)
-                 link['href'] = new_href
+            base = href
+            query_part = ""
+            anchor_part = ""
+    
+            # Extract anchor fragment first
+            if '#' in base:
+                base, anchor_part = base.split('#', 1)
+                anchor_part = '#' + anchor_part
+    
+            if '?' in base:
+                base, query_part = base.split('?', 1)
+                query_part = '?' + query_part
+    
+            # Only process links without language suffixes (base versions)
+            if base.endswith('.html') and not re.search(r'-(?:fr|es|zh|en)\.html$', base):
+                new_base = base.replace('.html', f'-{target_lang}.html')
+                new_href = new_base + query_part + anchor_part
+                link['href'] = new_href
         
         # 3. Update language switcher
         for switcher in soup.find_all(class_='language-switcher'):

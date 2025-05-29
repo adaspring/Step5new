@@ -227,6 +227,7 @@ jobs:
                 --openai "outputs/$filename/openai_translations.json" \
                 --output-deepl "$deepl_output" \
                 --output-openai "$openai_output" \
+                --target-lang "$(echo "${{ github.event.inputs.target_lang }}" | tr '[:upper:]' '[:lower:]')" \
                 --both || {
                 echo "❌ Step 4 failed for $filename"
                 continue

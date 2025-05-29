@@ -42,6 +42,8 @@ def post_process_html(html_content, output_file, target_lang):
         # 2. Process internal links (only base versions without language suffixes)
         link_pattern = re.compile(r'^(?!http|#|mailto:).*\.html')
         for link in soup.find_all('a', href=link_pattern):
+            if link.find_parent(class_='language-switcher'):
+               continue
             href = link['href']
     
             base = href

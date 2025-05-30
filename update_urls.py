@@ -8,20 +8,23 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-def update_urls_in_file(file_path: str, language_code: str) -> None:
+def update_urls_in_file(file_path: str, language_code: str = None) -> None:
     """Update JSON-LD and hreflang URLs in HTML file"""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
+        # Determine URL suffix
+        url_suffix = f"-{language_code}" if language_code else ""
+        
         # Update JSON-LD URLs
         def update_jsonld_url(match: re.Match) -> str:
             jsonld = match.group(1)
             patterns = [
-                (r'"url": "https://artea\.netlify\.app/([^"]*?)\.html"', 
-                 f'"url": "https://artea.netlify.app/\\1-{language_code}.html"'),
-                (r'"mainEntityOfPage": \{.*?"@id": "https://artea\.netlify\.app/([^"]*?)\.html"',
-                 f'"mainEntityOfPage": {{"@type": "WebPage", "@id": "https://artea.netlify.app/\\1-{language_code}.html"')
+                (r'"url": "https://artea\.netlify\.app/([^"]*?)(?:-[a-z]{2}(?:-[A-Z]{2})?)?\.html"', 
+                 f'"url": "https://artea.netlify.app/\\1{url_suffix}.html"'),
+                (r'"mainEntityOfPage": \{.*?"@id": "https://artea\.netlify\.app/([^"]*?)(?:-[a-z]{2}(?:-[A-Z]{2})?)?\.html"',
+                 f'"mainEntityOfPage": {{"@type": "WebPage", "@id": "https://artea.netlify.app/\\1{url_suffix}.html"')
             ]
             for pattern, replacement in patterns:
                 jsonld = re.sub(pattern, replacement, jsonld)
@@ -36,17 +39,25 @@ def update_urls_in_file(file_path: str, language_code: str) -> None:
 
         # Update BreadcrumbList
         content = re.sub(
-            r'"item": "https://artea\.netlify\.app/([^"]*?)\.html"',
-            f'"item": "https://artea.netlify.app/\\1-{language_code}.html"',
+            r'"item": "https://artea\.netlify\.app/([^"]*?)(?:-[a-z]{2}(?:-[A-Z]{2})?)?\.html"',
+            f'"item": "https://artea.netlify.app/\\1{url_suffix}.html"',
             content
         )
 
-        # Update hreflang URLs
-        content = re.sub(
-            r'(<link rel="alternate" hreflang="[^"]*" href="https://artea\.netlify\.app/)([^"]*?)\.html"',
-            f'\\1\\2-{language_code}.html"',
-            content
-        )
+        # Update hreflang URLs (only if language_code exists)
+        if language_code:
+            content = re.sub(
+                r'(<link rel="alternate" hreflang="[^"]*" href="https://artea\.netlify\.app/)([^"]*?)(?:-[a-z]{2}(?:-[A-Z]{2})?)?\.html"',
+                f'\\1\\2-{language_code}.html"',
+                content
+            )
+        else:
+            # For base language, ensure URLs don't have language suffixes
+            content = re.sub(
+                r'(<link rel="alternate" hreflang="[^"]*" href="https://artea\.netlify\.app/)([^"]*?)(?:-[a-z]{2}(?:-[A-Z]{2})?)?\.html"',
+                '\\1\\2.html"',
+                content
+            )
 
         with open(file_path, 'w', encoding='utf-8') as f:
             f.write(content)
@@ -65,13 +76,10 @@ def process_files(input_folder: str = 'upload', output_folder: str = 'processed'
             continue
             
         try:
-            # Extract language code (e.g., "es" from "nok-terracottas-es.html")
+            # Extract language code if exists (e.g., "es" from "nok-terracottas-es.html")
             match = re.search(r'-([a-z]{2}(?:-[A-Z]{2})?)\.html$', filename)
-            if not match:
-                logger.warning(f"Skipping {filename} - no language code detected")
-                continue
-                
-            language_code = match.group(1)
+            language_code = match.group(1) if match else None
+            
             input_path = os.path.join(input_folder, filename)
             output_path = os.path.join(output_folder, filename)
             

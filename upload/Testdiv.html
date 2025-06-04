@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>i18n Attribute Test Cases</title>
+    <meta name="description" content="Test page for translation extraction">
+    <meta property="og:title" content="i18n Tester">
+</head>
+<body>
+    <!-- Core Translatable (Your Original List) -->
+    <img src="logo.png" alt="Company logo">
+    <input type="text" placeholder="Enter your name">
+    <span title="Tooltip text">Hover me</span>
+    
+    <!-- Dynamic Attributes (New Teachable Cases) -->
+    <div 
+        data-tooltip="Click to continue"                         <!-- Should EXTRACT -->
+        data-ui-error="Invalid input"                             <!-- Should EXTRACT -->
+        data-config='{"timeout":30}'                              <!-- Should SKIP (JSON) -->
+        data-test-id="button_primary"                             <!-- Should SKIP (ID) -->
+        aria-helptext="Press F1 for assistance"                   <!-- Should EXTRACT -->
+        aria-custom="This is new"                                 <!-- Should EXTRACT -->
+    ></div>
+
+    <!-- Mixed Content -->
+    <p data-mixed="Price: $9.99">                                <!-- Should EXTRACT (has text) -->
+        Contains <math><mi>x</mi><mo>=</mo><mn>2</mn></math>     <!-- Should SKIP (math) -->
+    </p>
+
+    <!-- Language Detection -->
+    <span data-cn-help="帮助中心" data-fr-label="Aide"></span>    <!-- Both should EXTRACT -->
+
+    <!-- Technical Values -->
+    <div 
+        data-json='{"key":"value"}'                              <!-- Should SKIP -->
+        data-hash="a1b2c3"                                       <!-- Should SKIP -->
+        data-format="YYYY-MM-DD"                                 <!-- Should SKIP -->
+    ></div>
+
+    <!-- Accessibility -->
+    <button aria-label="Close modal" data-qa="modal_close_btn">   <!-- aria-label EXTRACT, data-qa SKIP -->
+        ×
+    </button>
+
+    <!-- Edge Cases -->
+    <input 
+        value="Submit"                                           <!-- Should EXTRACT (original list) -->
+        data-value="Submit"                                       <!-- Should EXTRACT (teachable) -->
+        data-value-raw="S\u0062mit"                               <!-- Should SKIP (encoded) -->
+    >
+</body>
+</html>

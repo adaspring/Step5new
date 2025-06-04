@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="fr">
+ <head>
+  <meta charset="utf-8"/>
+  <title>
+   Cas de test des attributs i18n
+  </title>
+  <meta content="Page de test pour l'extraction de la traduction" name="description"/>
+  <meta content="i18n Tester" property="og:title"/>
+ </head>
+ <body>
+  <!-- Core Translatable (Your Original List) -->
+  <img alt="Logo de l'entreprise" src="logo.png"/>
+  <input placeholder="Entrez votre nom" type="text"/>
+  <span title="Texte de l'infobulle">
+   Hover me
+  </span>
+  <!-- Dynamic Attributes (New Teachable Cases) -->
+  <div --="" <!--="" data-tooltip="Cliquez pour continuer" extract="" should="">
+   data-ui-error="Entrée invalide"
+   <!-- Should EXTRACT -->
+   data-config='{"timeout":30}'
+   <!-- Should SKIP (JSON) -->
+   data-test-id="button_primary"
+   <!-- Should SKIP (ID) -->
+   aria-helptext="Appuyez sur F1 pour obtenir de l'aide"
+   <!-- Should EXTRACT -->
+   aria-custom="Ceci est nouveau"
+   <!-- Should EXTRACT -->
+   &gt;
+  </div>
+  <!-- Mixed Content -->
+  <p data-mixed="Price: $9.99">
+   <!-- Should EXTRACT (has text) -->
+   Contient
+   <math>
+    <mi>
+     x
+    </mi>
+    <mo>
+     =
+    </mo>
+    <mn>
+     2
+    </mn>
+   </math>
+   <!-- Should SKIP (math) -->
+  </p>
+  <!-- Language Detection -->
+  <span data-cn-help="帮助中心" data-fr-label="Aide">
+  </span>
+  <!-- Both should EXTRACT -->
+  <!-- Technical Values -->
+  <div --="" <!--="" data-json='{"key":"value"}' should="" skip="">
+   data-hash="a1b2c3"
+   <!-- Should SKIP -->
+   data-format="YYYY-MM-DD"
+   <!-- Should SKIP -->
+   &gt;
+  </div>
+  <!-- Accessibility -->
+  <button aria-label="Fermer la fenêtre modale" data-qa="modal_close_btn">
+   <!-- aria-label EXTRACT, data-qa SKIP -->
+   ×
+  </button>
+  <!-- Edge Cases -->
+  <input (original="" --="" <!--="" extract="" list)="" should="" value="Soumettre"/>
+  data-value="Submit"
+  <!-- Should EXTRACT (teachable) -->
+  data-value-raw="S\u0062mit"
+  <!-- Should SKIP (encoded) -->
+  &gt;
+ </body>
+</html>

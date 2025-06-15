@@ -1,0 +1,51 @@
+{
+  "processing_order": [
+    "/home/runner/workspace/sessions/session-yVGYZV7i8S2lLyZnhYgh6w/extracted/snake-akhan-weight_1/translatable_flat.json",
+    "/home/runner/workspace/sessions/session-yVGYZV7i8S2lLyZnhYgh6w/extracted/sun-akhan-weight/translatable_flat.json",
+    "/home/runner/workspace/sessions/session-yVGYZV7i8S2lLyZnhYgh6w/extracted/twins-akhan-weight/translatable_flat.json"
+  ],
+  "cumulative_stats": [
+    {
+      "file": "/home/runner/workspace/sessions/session-yVGYZV7i8S2lLyZnhYgh6w/extracted/snake-akhan-weight_1/translatable_flat.json",
+      "timestamp": "1750023004.9829295",
+      "total_segments": 124,
+      "cache_hits": 0,
+      "cache_misses": 124,
+      "hit_rate_percent": 0.0,
+      "memory_size_after": 0,
+      "new_entries_added": 124,
+      "processing_order": 1
+    },
+    {
+      "file": "/home/runner/workspace/sessions/session-yVGYZV7i8S2lLyZnhYgh6w/extracted/sun-akhan-weight/translatable_flat.json",
+      "timestamp": "1750023013.0439177",
+      "total_segments": 122,
+      "cache_hits": 0,
+      "cache_misses": 122,
+      "hit_rate_percent": 0.0,
+      "memory_size_after": 0,
+      "new_entries_added": 122,
+      "processing_order": 2
+    },
+    {
+      "file": "/home/runner/workspace/sessions/session-yVGYZV7i8S2lLyZnhYgh6w/extracted/twins-akhan-weight/translatable_flat.json",
+      "timestamp": "1750023022.1449044",
+      "total_segments": 122,
+      "cache_hits": 0,
+      "cache_misses": 122,
+      "hit_rate_percent": 0.0,
+      "memory_size_after": 0,
+      "new_entries_added": 122,
+      "processing_order": 3
+    }
+  ],
+  "summary": {
+    "total_files_processed": 3,
+    "total_segments_processed": 368,
+    "total_cache_hits": 0,
+    "total_cache_misses": 368,
+    "overall_hit_rate_percent": 0.0,
+    "final_memory_size": 0,
+    "last_updated": "/home/runner/workspace/sessions/session-yVGYZV7i8S2lLyZnhYgh6w"
+  }
+}
